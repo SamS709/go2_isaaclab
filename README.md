@@ -24,30 +24,24 @@ This project/repository trains a policy for go2 unitree robot and focuses on the
     ```
 
 
-    - Running a task:
+    - Train Go2:
 
         ```bash
         # use 'FULL_PATH_TO_isaaclab.sh|bat -p' instead of 'python' if Isaac Lab is not installed in Python venv or conda
-        python scripts/<RL_LIBRARY>/train.py --task=<TASK_NAME>
+        python scripts/rsl_rl/train.py --task Isaac-Velocity-Go2-Direct-v0 --num_envs 4096 --headless
         ```
 
-    - Running a task with dummy agents:
+    - Running trained policy :
 
-        These include dummy agents that output zero or random agents. They are useful to ensure that the environments are configured correctly.
+        ```bash
+        python scripts/rsl_rl/play.py --task Isaac-Velocity-Go2-Direct-v0 --num_envs 8 
+        ```
+    - Controlling the robot with the keyboard (here, a pretrained checkpoint is used):
 
-        - Zero-action agent
-
-            ```bash
-            # use 'FULL_PATH_TO_isaaclab.sh|bat -p' instead of 'python' if Isaac Lab is not installed in Python venv or conda
-            python scripts/zero_agent.py --task=<TASK_NAME>
-            ```
-        - Random-action agent
-
-            ```bash
-            # use 'FULL_PATH_TO_isaaclab.sh|bat -p' instead of 'python' if Isaac Lab is not installed in Python venv or conda
-            python scripts/random_agent.py --task=<TASK_NAME>
-            ```
-
+        ```bash
+        python scripts/control/go2_locomotion.py --checkpoint pretrained_checkpoint/pretrained_checkpoint.pt
+        ```
+       
 ### Set up IDE (Optional)
 
 To setup the IDE, please follow these instructions:
