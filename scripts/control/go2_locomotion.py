@@ -9,7 +9,7 @@ This script demonstrates an interactive demo with the H1 rough terrain environme
 .. code-block:: bash
 
     # Usage
-    python scripts/control/go2_locomotion.py --checkpoint pretrained_checkpoint/model_2999.pt
+    python scripts/control/go2_locomotion.py --checkpoint pretrained_checkpoint/pretrained_checkpoint.pt
 """
 
 
