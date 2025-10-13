@@ -24,24 +24,24 @@ This project/repository trains a policy for go2 unitree robot and focuses on the
     ```
 
 
-    - Train Go2:
+- Train Go2:
 
-        ```bash
-        # use 'FULL_PATH_TO_isaaclab.sh|bat -p' instead of 'python' if Isaac Lab is not installed in Python venv or conda
-        python scripts/rsl_rl/train.py --task Isaac-Velocity-Go2-Direct-v0 --num_envs 4096 --headless
-        ```
+    ```bash
+    # use 'FULL_PATH_TO_isaaclab.sh|bat -p' instead of 'python' if Isaac Lab is not installed in Python venv or conda
+    python scripts/rsl_rl/train.py --task Isaac-Velocity-Go2-Direct-v0 --num_envs 4096 --headless
+    ```
 
-    - Running trained policy :
+- Running trained policy :
 
-        ```bash
-        python scripts/rsl_rl/play.py --task Isaac-Velocity-Go2-Direct-v0 --num_envs 8 
-        ```
-    - Controlling the robot with the keyboard (here, a pretrained checkpoint is used):
+    ```bash
+    python scripts/rsl_rl/play.py --task Isaac-Velocity-Go2-Direct-v0 --num_envs 8 
+    ```
+- Controlling the robot with the keyboard (here, a pretrained checkpoint is used):
 
-        ```bash
-        python scripts/control/go2_locomotion.py --checkpoint pretrained_checkpoint/pretrained_checkpoint.pt
-        ```
-       
+    ```bash
+    python scripts/control/go2_locomotion.py --checkpoint pretrained_checkpoint/pretrained_checkpoint.pt
+    ```
+   
 ### Set up IDE (Optional)
 
 To setup the IDE, please follow these instructions:
