@@ -21,6 +21,7 @@ This project/repository trains a policy for go2 unitree robot and focuses on the
     ```bash
     # use 'PATH_TO_isaaclab.sh|bat -p' instead of 'python' if Isaac Lab is not installed in Python venv or conda
     python -m pip install -e source/go2_isaaclab
+    ```
 
 
     - Running a task:
