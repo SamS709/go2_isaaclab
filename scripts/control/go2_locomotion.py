@@ -9,10 +9,9 @@ This script demonstrates an interactive demo with the H1 rough terrain environme
 .. code-block:: bash
 
     # Usage
-    python scripts/control/go2_locomotion.py --checkpoint logs/rsl_rl/go2_flat_direct/2025-10-12_12-53-54/model_2600.pt 
+    python scripts/control/go2_locomotion.py --checkpoint pretrained_checkpoint/model_2999.pt
 """
 
-"""Launch Isaac Sim Simulator first."""
 
 import argparse
 import os
