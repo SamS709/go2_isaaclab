@@ -43,7 +43,12 @@ Make sure you are in your the classic Isaaclab python environnement (no Newton b
     ```bash
     python scripts/rsl_rl/play.py --task Isaac-Velocity-Go2-Direct-v0 --num_envs 8 
     ```
-- Controlling the robot with the keyboard (here, a pretrained checkpoint is used):
+- Controlling the robot with the keyboard (here, a pretrained checkpoint is used):  
+Controls:
+    - **Up/Down arrows**: Increase/decrease the robot's forward/backward velocity (x-axis)
+    - **Left/Right arrows**: Increase/decrease the robot's left/right velocity (y-axis) 
+    - **E/R keys**: Increase/decrease the robot's height (z-axis position)
+    - **F/G keys**: Increase/decrease the robot's angular velocity (yaw rotation)
 
     ```bash
     python scripts/control/go2_locomotion.py --checkpoint pretrained_checkpoint/pretrained_checkpoint.pt
@@ -56,7 +61,7 @@ Make sure to use the Newton Isaaclab python environnement. Go into the folder wh
 You need to move the files from sim2sim of the repo to the Newton Isaaclab dir:
 - physx_to_newton_go2.yaml into /scripts/newton_sim2sim/mappings folder
 - pretrained_checkpoint.pt: create a dir named checkpoints inside scrimpts/newton_sim2sim/ and move the file into it.
-- go2/ folder into source/isaaclab_tasks/isaaclab_tasks/direct/
+- go2_isaaclab/ folder into source/isaaclab_tasks/isaaclab_tasks/direct/
 
 Then run it to see the result (using newton visualizer):
 ```bash

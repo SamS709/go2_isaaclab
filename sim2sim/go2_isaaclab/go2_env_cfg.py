@@ -14,8 +14,8 @@ from isaaclab.managers import SceneEntityCfg
 from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.sensors import ContactSensorCfg
 # Uncomment the two lines below for MuJoCo env in Newton Isaaclab's branch
-# from isaaclab.sim._impl.newton_manager_cfg import NewtonCfg
-# from isaaclab.sim._impl.solvers_cfg import MJWarpSolverCfg
+from isaaclab.sim._impl.newton_manager_cfg import NewtonCfg
+from isaaclab.sim._impl.solvers_cfg import MJWarpSolverCfg
 from isaaclab.sim import SimulationCfg
 from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
@@ -61,15 +61,15 @@ class EventCfg:
     """Configuration for randomization."""
     
     # (comment reset_robot_joints) if you are in Newton Isaaclab's branch)
-    reset_robot_joints = EventTerm(
-        func=mdp.reset_joints_by_offset,
-        mode="reset",
-        params={
-            "position_range": (-0.3, 0.3),  # Randomize joint positions by ±0.3 radians
-            "velocity_range": (-0.05, 0.05),  # Small random initial velocities
-            "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
-        },
-    )
+    # reset_robot_joints = EventTerm(
+    #     func=mdp.reset_joints_by_offset,
+    #     mode="reset",
+    #     params={
+    #         "position_range": (-0.3, 0.3),  # Randomize joint positions by ±0.3 radians
+    #         "velocity_range": (-0.05, 0.05),  # Small random initial velocities
+    #         "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
+    #     },
+    # )
     
     reset_robot_base = EventTerm(
         func=mdp.reset_root_state_uniform,
@@ -138,41 +138,41 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
 
     # classic imulation (comment if you are in Newton Isaaclab's branch)
     
-    sim: SimulationCfg = SimulationCfg(
-        dt=1 / 200,
-        render_interval=decimation,
-        physics_material=sim_utils.RigidBodyMaterialCfg(
-            friction_combine_mode="multiply",
-            restitution_combine_mode="multiply",
-            static_friction=1.0,
-            dynamic_friction=1.0,
-            restitution=0.0,
-        ),
-    )
-    
-    # MuJoCo simulation (uncomment if you are in Newton Isaaclab's branch)
-    
-    # solver_cfg = MJWarpSolverCfg(
-    #     njmax=150,
-    #     ncon_per_env=35,
-    #     ls_iterations=10,
-    #     cone="pyramidal",
-    #     ls_parallel=True,
-    #     impratio=1,
-    #     integrator="implicit",
-    # )
-    
-    # newton_cfg = NewtonCfg(
-    #     solver_cfg=solver_cfg,
-    #     num_substeps=1,
-    #     debug_mode=False,
-    # )
-
     # sim: SimulationCfg = SimulationCfg(
     #     dt=1 / 200,
     #     render_interval=decimation,
-    #     newton_cfg=newton_cfg,
+    #     physics_material=sim_utils.RigidBodyMaterialCfg(
+    #         friction_combine_mode="multiply",
+    #         restitution_combine_mode="multiply",
+    #         static_friction=1.0,
+    #         dynamic_friction=1.0,
+    #         restitution=0.0,
+    #     ),
     # )
+    
+    # MuJoCo simulation (uncomment if you are in Newton Isaaclab's branch)
+    
+    solver_cfg = MJWarpSolverCfg(
+        njmax=150,
+        ncon_per_env=35,
+        ls_iterations=10,
+        cone="pyramidal",
+        ls_parallel=True,
+        impratio=1,
+        integrator="implicit",
+    )
+    
+    newton_cfg = NewtonCfg(
+        solver_cfg=solver_cfg,
+        num_substeps=1,
+        debug_mode=False,
+    )
+
+    sim: SimulationCfg = SimulationCfg(
+        dt=1 / 200,
+        render_interval=decimation,
+        newton_cfg=newton_cfg,
+    )
 
     
     terrain = TerrainImporterCfg(
