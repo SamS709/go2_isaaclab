@@ -11,7 +11,7 @@ from isaaclab.markers import VisualizationMarkersCfg
 from isaaclab.markers.config import SPHERE_MARKER_CFG
 from isaaclab.utils import configclass
 
-from go2_isaaclab.tasks.direct.go2_isaaclab.commands.z_axis_command import ZAxisCommand
+from .z_axis_command import ZAxisCommand
 
 
 @configclass 

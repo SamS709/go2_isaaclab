@@ -43,7 +43,10 @@ Make sure you are in your the classic Isaaclab python environnement (no Newton b
     ```bash
     python scripts/rsl_rl/play.py --task Isaac-Velocity-Go2-Direct-v0 --num_envs 8 
     ```
-- Controlling the robot with the keyboard (here, a pretrained checkpoint is used):  
+- Controlling the robot with the keyboard (here, a pretrained checkpoint is used): 
+
+<img src="images/commands_control.png" width="400"/>
+
 Controls:
     - **Up/Down arrows**: Increase/decrease the robot's forward/backward velocity (x-axis)
     - **Left/Right arrows**: Increase/decrease the robot's left/right velocity (y-axis) 
@@ -64,6 +67,9 @@ You need to move the files from sim2sim of the repo to the Newton Isaaclab dir:
 - go2_isaaclab/ folder into source/isaaclab_tasks/isaaclab_tasks/direct/
 
 Then run it to see the result (using newton visualizer):
+
+<img src="images/MuJoCo.png" width="400"/>
+
 ```bash
 python -m scripts.newton_sim2sim.rsl_rl_transfer \
 --task Isaac-Velocity-Go2-Direct-v0 \

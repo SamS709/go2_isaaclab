@@ -16,7 +16,7 @@ from isaaclab.markers import VisualizationMarkers
 
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
-    from go2_isaaclab.tasks.direct.go2_isaaclab.commands.z_axis_command_cfg import ZAxisCommandCfg
+    from .z_axis_command_cfg import ZAxisCommandCfg
 
 
 class ZAxisCommand(CommandTerm):
