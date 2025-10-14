@@ -62,7 +62,7 @@ Then run it to see the result (using newton visualizer):
 ```bash
 python -m scripts.newton_sim2sim.rsl_rl_transfer \
 --task Isaac-Velocity-Go2-Direct-v0 \
---num_envs 1 \
+--num_envs 10 \
 --checkpoint scripts/newton_sim2sim/checkpoints/pretrained_checkpoint.pt \
 --policy_transfer_file scripts/newton_sim2sim/mappings/physx_to_newton_go2.yaml \
 --newton_visualizer \
