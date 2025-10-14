@@ -48,10 +48,10 @@ Make sure you are in your the classic Isaaclab python environnement (no Newton b
 <img src="images/commands_control.png" width="400"/>
 
 Controls:
-    - **Up/Down arrows**: Increase/decrease the robot's forward/backward velocity (x-axis)
-    - **Left/Right arrows**: Increase/decrease the robot's left/right velocity (y-axis) 
-    - **E/R keys**: Increase/decrease the robot's height (z-axis position)
-    - **F/G keys**: Increase/decrease the robot's angular velocity (yaw rotation)
+- **Up/Down arrows**: Increase/decrease the robot's forward/backward velocity (x-axis)
+- **Left/Right arrows**: Increase/decrease the robot's left/right velocity (y-axis) 
+- **E/R keys**: Increase/decrease the robot's height (z-axis position)
+- **F/G keys**: Increase/decrease the robot's angular velocity (yaw rotation)
 
     ```bash
     python scripts/control/go2_locomotion.py --checkpoint pretrained_checkpoint/pretrained_checkpoint.pt
