@@ -15,7 +15,7 @@ from isaaclab.envs import DirectRLEnv
 from isaaclab.sensors import ContactSensor
 from isaaclab.managers import CommandManager
 
-from go2_isaaclab.tasks.direct.go2_isaaclab.go2_env_cfg import Go2FlatEnvCfg
+from .go2_env_cfg import Go2FlatEnvCfg
 
 
 class Go2Env(DirectRLEnv):

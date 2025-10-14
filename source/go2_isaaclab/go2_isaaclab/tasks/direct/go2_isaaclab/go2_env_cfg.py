@@ -12,14 +12,16 @@ from isaaclab.envs import DirectRLEnvCfg
 from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.scene import InteractiveSceneCfg
-from isaaclab.sensors import ContactSensorCfg, patterns
+from isaaclab.sensors import ContactSensorCfg
+# Uncomment the two lines below for MuJoCo env in Newton Isaaclab's branch
+# from isaaclab.sim._impl.newton_manager_cfg import NewtonCfg
+# from isaaclab.sim._impl.solvers_cfg import MJWarpSolverCfg
 from isaaclab.sim import SimulationCfg
 from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
-from isaaclab.utils import math
 
 # Import custom commands
-from go2_isaaclab.tasks.direct.go2_isaaclab.commands.z_axis_command_cfg import ZAxisCommandCfg
+from .commands.z_axis_command_cfg import ZAxisCommandCfg
 
 ##
 # Pre-defined configs
@@ -58,7 +60,7 @@ class CommandsCfg:
 class EventCfg:
     """Configuration for randomization."""
     
-    # reset
+    # (comment reset_robot_joints) if you are in Newton Isaaclab's branch)
     reset_robot_joints = EventTerm(
         func=mdp.reset_joints_by_offset,
         mode="reset",
@@ -134,7 +136,8 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
     observation_space = 49
     state_space = 0
 
-    # simulation
+    # classic imulation (comment if you are in Newton Isaaclab's branch)
+    
     sim: SimulationCfg = SimulationCfg(
         dt=1 / 200,
         render_interval=decimation,
@@ -146,6 +149,45 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
             restitution=0.0,
         ),
     )
+    
+    # MuJoCo simulation (uncomment if you are in Newton Isaaclab's branch)
+    
+    # solver_cfg = MJWarpSolverCfg(
+    #     njmax=150,
+    #     ncon_per_env=35,
+    #     ls_iterations=10,
+    #     cone="pyramidal",
+    #     ls_parallel=True,
+    #     impratio=1,
+    #     integrator="implicit",
+    # )
+    
+    # newton_cfg = NewtonCfg(
+    #     solver_cfg=solver_cfg,
+    #     num_substeps=1,
+    #     debug_mode=False,
+    # )
+
+    # sim: SimulationCfg = SimulationCfg(
+    #     dt=1 / 200,
+    #     render_interval=decimation,
+    #     newton_cfg=newton_cfg,
+    # )
+    # terrain = TerrainImporterCfg(
+    #     prim_path="/World/ground",
+    #     terrain_type="plane",
+    #     collision_group=-1,
+    #     physics_material=sim_utils.RigidBodyMaterialCfg(
+    #         friction_combine_mode="multiply",
+    #         restitution_combine_mode="multiply",
+    #         static_friction=1.0,
+    #         dynamic_friction=1.0,
+    #         restitution=0.0,
+    #     ),
+    #     debug_vis=False,
+    # )
+
+    
     terrain = TerrainImporterCfg(
         prim_path="/World/ground",
         terrain_type="plane",
@@ -184,9 +226,7 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
     joint_accel_reward_scale = -2.5e-7
     action_rate_reward_scale = -0.01
     feet_air_time_reward_scale = 0.25
-    # undesired_contact_reward_scale = -1.0
     flat_orientation_reward_scale = -2.5
-    # base_pos_reward_scale = -3.0
     feet_distance_reward_scale = 1.0
 
 
