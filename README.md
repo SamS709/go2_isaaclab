@@ -53,5 +53,21 @@ Make sure you are in your the classic Isaaclab python environnement (no Newton b
 
   Make sure to use the Newton Isaaclab python environnement. Go into the folder where you cloned the Newton branch of Isaaclab.
 
+  You need to move the files from sim2sim of the repo to the Newton Isaaclab dir:
+  - physx_to_newton_go2.yaml into /scripts/newton_sim2sim/mappings folder
+  - pretrained_checkpoint.pt: create a dir named checkpoints inside scrimpts/newton_sim2sim/ and move the file into it.
+  - go2/ folder into source/isaaclab_tasks/isaaclab_tasks/direct/
+ 
+Then run it to see the result (using newton visualizer):
+```bash
+python -m scripts.newton_sim2sim.rsl_rl_transfer \
+  --task Isaac-Velocity-Go2-Direct-v0 \
+  --num_envs 1 \
+  --checkpoint scripts/newton_sim2sim/checkpoints/pretrained_checkpoint.pt \
+  --policy_transfer_file scripts/newton_sim2sim/mappings/physx_to_newton_go2.yaml \
+  --newton_visualizer \
+  --headless
+```
+
   
  
