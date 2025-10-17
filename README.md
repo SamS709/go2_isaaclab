@@ -1,7 +1,5 @@
 # Policy training to Real deployement for Go2 Unitree Robot
 
-# Custom Go2 teleoperation and Sim2Sim rsl_rl training with Isaaclab
-
 ## Overview
 
 This project/repository trains a policy for go2 unitree robot and focuses on the Sim2Sim from PhysX to Mujoco using the Newton branch of Isaaclab.
@@ -138,7 +136,7 @@ python -m scripts.newton_sim2sim.rsl_rl_transfer \
 --task Isaac-Velocity-Go2-Direct-v0 \
 --num_envs 10 \
 --checkpoint scripts/newton_sim2sim/checkpoints/pretrained_checkpoint.pt \
---policy_transfer_file scripts/newton_sim2sim/mappings/physx_to_newton_go2.yaml \
+--policy_transfer_file scripts/newton_sim2sim/mappings/physx_to_mujoco_go2.yaml \
 --newton_visualizer \
 --headless
 ```
