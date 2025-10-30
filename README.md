@@ -140,4 +140,7 @@ python -m scripts.newton_sim2sim.rsl_rl_transfer \
 --newton_visualizer \
 --headless
 ```
+ ## Making the Sim2Real using huro github
+
+ pip install torch
 
