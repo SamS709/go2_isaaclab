@@ -94,6 +94,30 @@ class EventCfg:
             "asset_cfg": SceneEntityCfg("robot"),
         },
     )
+    
+#     robot_joint_stiffness_and_damping = EventTerm(
+#       func=mdp.randomize_actuator_gains,
+#       mode="reset",
+#       params={
+#           "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
+#           "stiffness_distribution_params": (20.0, 100.0),
+#           "damping_distribution_params": (0.3,1.0),
+#           "operation": "abs",
+#           "distribution": "uniform",
+#       },
+#   )
+    
+#     physics_material = EventTerm(
+#         func=mdp.randomize_rigid_body_material,
+#         mode="reset",
+#         params={
+#             "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
+#             "static_friction_range": (0.35, 0.95),
+#             "dynamic_friction_range": (0.40, 0.65),
+#             "restitution_range": (0.0, 0.07),
+#             "num_buckets": 64,
+#         },
+#     )
 
     
     physics_material = EventTerm(
@@ -204,7 +228,7 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
     )
 
     # reward scales
-    lin_vel_reward_scale = 1.5
+    lin_vel_reward_scale = 1.5 # replace by 1.5 for env without damping and switfness randomization
     yaw_rate_reward_scale = 0.75
     base_z_reward_scale = 0.7
     z_vel_reward_scale = -2.0

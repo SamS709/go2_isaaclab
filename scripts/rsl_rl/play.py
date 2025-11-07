@@ -182,6 +182,21 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         start_time = time.time()
         # run everything in inference mode
         with torch.inference_mode():
+            #Print stiffness and damping for each actuator group
+            # print("\n=== Robot Actuator PD Gains ===")
+            # for actuator_name, actuator in robot.actuators.items():
+            #     print(f"\nActuator: {actuator_name}")
+            #     print(f"  Stiffness (env 0): {actuator.stiffness[0]}")
+            #     print(f"  Damping (env 0): {actuator.damping[0]}")
+            
+            print(f"  Obs[0:3] (lin_vel): {obs['policy'][0,0:3]}")
+            print(f"  Obs[3:6] (ang_vel): {obs['policy'][0,3:6]}")
+            print(f"  Obs[6:9] (gravity_b): {obs['policy'][0,6:9]}")
+            print(f"  Obs[9:12] (cmd_vel): {obs['policy'][0,9:12]}")
+            print(f"  Obs[12] (cmd_height): {obs['policy'][0,12]}")
+            print(f"  Obs[13:25] (joint_pos): {obs['policy'][0,13:25]}")
+            print(f"  Obs[25:37] (joint_vel): {obs['policy'][0,25:37]}")
+            print(f"  Obs[37:49] (prev_actions): {obs['policy'][0,37:49]}")
             # agent stepping
             # print(obs["policy"][0,13:25])
             # print(obs["policy"][0,12])
