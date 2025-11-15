@@ -98,7 +98,8 @@ class Go2Env(DirectRLEnv):
                 for tensor in (
                     self._robot.data.root_lin_vel_b + torch.randn_like(self._robot.data.root_lin_vel_b) * float(0.01),
                     self._robot.data.root_ang_vel_b + torch.randn_like(self._robot.data.root_ang_vel_b) * float(0.01),
-                    self._robot.data.projected_gravity_b + torch.randn_like(self._robot.data.projected_gravity_b) * float(0.01),
+                    # self._robot.data.projected_gravity_b + torch.randn_like(self._robot.data.projected_gravity_b) * float(0.01),
+                    self._robot.data.root_link_quat_w ,#+ torch.randn_like(self._robot.data.root_link_quat_w) * float(0.01), # no quaternion randomization for the moment 
                     self._commands.get_command("base_velocity"),
                     self._commands.get_command("base_pos"),
                     self._robot.data.joint_pos - self._robot.data.default_joint_pos + torch.randn_like(self._robot.data.joint_pos) * float(0.03),
@@ -137,7 +138,7 @@ class Go2Env(DirectRLEnv):
         # feet air time
         first_contact = self._contact_sensor.compute_first_contact(self.step_dt)[:, self._feet_ids]
         last_air_time = self._contact_sensor.data.last_air_time[:, self._feet_ids]
-        air_time = torch.sum((last_air_time - 0.5) * first_contact, dim=1) * (
+        air_time = torch.sum(torch.exp(-torch.square(0.5-last_air_time)/0.01) * first_contact, dim=1) * (
             torch.norm(self._commands.get_command("base_pos")[:, :2], dim=1) > 0.1
         ) 
         # flat orientation

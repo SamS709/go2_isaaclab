@@ -147,3 +147,16 @@ python -m scripts.newton_sim2sim.rsl_rl_transfer \
  
  Changed the order of the joints (Right <-> Left)
 
+Clone the sami branch:
+
+```bash
+git clone --single-branch --branch sami https://github.com/itsikelis/huro.git
+```
+
+Follow the instructions provided in the readme to see how to deploy it on th real robot.
+
+The changes brought to the previous file (unitree_mujoco simulation) were:
+
+
+- the mapping of the joints (Right <-> Left)
+- the type of messages 

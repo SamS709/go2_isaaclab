@@ -95,17 +95,17 @@ class EventCfg:
         },
     )
     
-#     robot_joint_stiffness_and_damping = EventTerm(
-#       func=mdp.randomize_actuator_gains,
-#       mode="reset",
-#       params={
-#           "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
-#           "stiffness_distribution_params": (20.0, 100.0),
-#           "damping_distribution_params": (0.3,1.0),
-#           "operation": "abs",
-#           "distribution": "uniform",
-#       },
-#   )
+    robot_joint_stiffness_and_damping = EventTerm(
+      func=mdp.randomize_actuator_gains,
+      mode="reset",
+      params={
+          "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
+          "stiffness_distribution_params": (0.7, 1.4),
+          "damping_distribution_params": (0.3,1.0),
+          "operation": "scale",
+          "distribution": "uniform",
+      },
+  )
     
 #     physics_material = EventTerm(
 #         func=mdp.randomize_rigid_body_material,
@@ -125,9 +125,9 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
-            "static_friction_range": (0.75, 0.85),
-            "dynamic_friction_range": (0.55, 0.65),
-            "restitution_range": (0.0, 0.05),
+            "static_friction_range": (0.55, 2.0),
+            "dynamic_friction_range": (0.55, 1.5),
+            "restitution_range": (0.0, 0.1),
             "num_buckets": 64,
         },
     )
@@ -157,7 +157,7 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
     decimation = 4
     action_scale = 0.5
     action_space = 12
-    observation_space = 49
+    observation_space = 50
     state_space = 0
 
     # classic imulation (comment if you are in Newton Isaaclab's branch)

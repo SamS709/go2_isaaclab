@@ -7,6 +7,9 @@
 
 """Launch Isaac Sim Simulator first."""
 
+"""python scripts/rsl_rl/play.py --task Isaac-Velocity-Go2-Direct-v0 --num_envs 10 
+"""
+
 import argparse
 import sys
 
@@ -177,6 +180,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # reset environment
     obs = env.get_observations()
     timestep = 0
+    robot = env.unwrapped.scene["robot"]
     # simulate environment
     while simulation_app.is_running():
         start_time = time.time()
@@ -189,14 +193,14 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             #     print(f"  Stiffness (env 0): {actuator.stiffness[0]}")
             #     print(f"  Damping (env 0): {actuator.damping[0]}")
             
-            print(f"  Obs[0:3] (lin_vel): {obs['policy'][0,0:3]}")
-            print(f"  Obs[3:6] (ang_vel): {obs['policy'][0,3:6]}")
-            print(f"  Obs[6:9] (gravity_b): {obs['policy'][0,6:9]}")
-            print(f"  Obs[9:12] (cmd_vel): {obs['policy'][0,9:12]}")
-            print(f"  Obs[12] (cmd_height): {obs['policy'][0,12]}")
-            print(f"  Obs[13:25] (joint_pos): {obs['policy'][0,13:25]}")
-            print(f"  Obs[25:37] (joint_vel): {obs['policy'][0,25:37]}")
-            print(f"  Obs[37:49] (prev_actions): {obs['policy'][0,37:49]}")
+            # print(f"  Obs[0:3] (lin_vel): {obs['policy'][0,0:3]}")
+            # print(f"  Obs[3:6] (ang_vel): {obs['policy'][0,3:6]}")
+            # print(f"  Obs[6:9] (gravity_b): {obs['policy'][0,6:9]}")
+            # print(f"  Obs[9:12] (cmd_vel): {obs['policy'][0,9:12]}")
+            # print(f"  Obs[12] (cmd_height): {obs['policy'][0,12]}")
+            # print(f"  Obs[13:25] (joint_pos): {obs['policy'][0,13:25]}")
+            # print(f"  Obs[25:37] (joint_vel): {obs['policy'][0,25:37]}")
+            # print(f"  Obs[37:49] (prev_actions): {obs['policy'][0,37:49]}")
             # agent stepping
             # print(obs["policy"][0,13:25])
             # print(obs["policy"][0,12])

@@ -7,6 +7,14 @@
 
 """Launch Isaac Sim Simulator first."""
 
+
+"""python scripts/rsl_rl/train.py \
+  --task Isaac-Velocity-Go2-Direct-v0 \
+  --num_envs 8192 \
+  --resume \
+  --load_run 2025-11-11_13-16-41 \
+  --headless
+"""
 import argparse
 import sys
 
