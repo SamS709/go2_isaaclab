@@ -143,9 +143,7 @@ python -m scripts.newton_sim2sim.rsl_rl_transfer \
  ## Making the Sim2Real using huro github
 
 
- pip install torch (added to docker file)
- 
- Changed the order of the joints (Right <-> Left)
+In developpement...
 
 Clone the sami branch:
 
