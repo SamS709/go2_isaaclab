@@ -157,7 +157,7 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
     decimation = 4
     action_scale = 0.5
     action_space = 12
-    observation_space = 50
+    observation_space = 47
     state_space = 0
 
     # classic imulation (comment if you are in Newton Isaaclab's branch)

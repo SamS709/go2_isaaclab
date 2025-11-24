@@ -96,7 +96,7 @@ class Go2Env(DirectRLEnv):
             [
                 tensor
                 for tensor in (
-                    self._robot.data.root_lin_vel_b + torch.randn_like(self._robot.data.root_lin_vel_b) * float(0.01),
+                    # self._robot.data.root_lin_vel_b + torch.randn_like(self._robot.data.root_lin_vel_b) * float(0.01),
                     self._robot.data.root_ang_vel_b + torch.randn_like(self._robot.data.root_ang_vel_b) * float(0.01),
                     # self._robot.data.projected_gravity_b + torch.randn_like(self._robot.data.projected_gravity_b) * float(0.01),
                     self._robot.data.root_link_quat_w ,#+ torch.randn_like(self._robot.data.root_link_quat_w) * float(0.01), # no quaternion randomization for the moment 
