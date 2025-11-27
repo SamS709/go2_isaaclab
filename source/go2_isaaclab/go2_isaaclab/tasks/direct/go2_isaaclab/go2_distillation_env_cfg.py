@@ -38,3 +38,24 @@ class Go2TeacherStudentEnvCfg(Go2FlatEnvCfg):
         super().__post_init__()
         # Reduce number of environments for distillation training
         self.scene.num_envs = 256
+
+
+@configclass
+class Go2StudentFineTuneEnvCfg(Go2FlatEnvCfg):
+    """
+    Configuration for teacher-student distillation.
+    
+    Key differences from standard training:
+    - observation_space defines STUDENT observation size (reduced)
+    - teacher_observation_space defines TEACHER observation size (privileged/full)
+    - The environment must return dict with both "policy" (student) and "teacher" keys
+    """
+    
+    # Student observations (limited - no linear velocity)
+    # Components: base_ang_vel(3) + proj_gravity(3) + commands(3) + joint_pos(12) + joint_vel(12) + actions(12) = 45
+    observation_space = 46
+    
+    def __post_init__(self):
+        super().__post_init__()
+        # Reduce number of environments for distillation training
+        self.scene.num_envs = 256

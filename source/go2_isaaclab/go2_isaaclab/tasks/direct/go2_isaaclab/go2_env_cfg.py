@@ -35,7 +35,7 @@ class CommandsCfg:
 
     base_velocity = mdp.UniformVelocityCommandCfg(
         asset_name="robot",
-        resampling_time_range=(10.0, 10.0),
+        resampling_time_range=(5.0, 8.0),
         rel_standing_envs=0.02,
         rel_heading_envs=1.0,
         heading_command=False,
@@ -146,7 +146,7 @@ class EventCfg:
     push_robot = EventTerm(
         func=mdp.push_by_setting_velocity,
         mode="interval",
-        interval_range_s=(10.0, 15.0),
+        interval_range_s=(3.0, 7.0),
         params={"velocity_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5)}},
     )
 
@@ -157,7 +157,7 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
     decimation = 4
     action_scale = 0.5
     action_space = 12
-    observation_space = 47
+    observation_space = 50
     state_space = 0
 
     # classic imulation (comment if you are in Newton Isaaclab's branch)

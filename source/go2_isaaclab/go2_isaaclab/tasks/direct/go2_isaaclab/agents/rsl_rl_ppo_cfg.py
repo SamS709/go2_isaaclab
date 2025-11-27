@@ -5,7 +5,7 @@
 
 from isaaclab.utils import configclass
 
-from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlPpoActorCriticCfg, RslRlPpoAlgorithmCfg
+from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlPpoActorCriticRecurrentCfg, RslRlPpoActorCriticCfg, RslRlPpoAlgorithmCfg
 
 
 @configclass
@@ -18,10 +18,21 @@ class Go2FlatPPORunnerCfg(RslRlOnPolicyRunnerCfg):
         init_noise_std=1.0,
         actor_obs_normalization=False,
         critic_obs_normalization=False,
-        actor_hidden_dims=[256, 256, 256],
-        critic_hidden_dims=[256,256,256],
+        actor_hidden_dims=[128, 128],
+        critic_hidden_dims=[256, 128],
         activation="elu",
     )
+    # policy = RslRlPpoActorCriticRecurrentCfg(
+    #     init_noise_std=1.0,
+    #     actor_obs_normalization=False,
+    #     critic_obs_normalization=False,
+    #     actor_hidden_dims=[128, 128],
+    #     critic_hidden_dims=[256, 128],
+    #     activation="elu",
+    #     rnn_type="lstm",
+    #     rnn_hidden_dim=64,
+    #     rnn_num_layers=2
+    # )
     algorithm = RslRlPpoAlgorithmCfg(
         value_loss_coef=1.0,
         use_clipped_value_loss=True,

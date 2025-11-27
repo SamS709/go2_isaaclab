@@ -21,8 +21,8 @@ class Go2AsymmetricEnvCfg(Go2FlatEnvCfg):
     It uses the same observation space as the student during distillation training.
     """
 
-    observation_space = 47
-    critic_observation_space = 50
+    observation_space = 46
+    critic_observation_space = 49
     
     def __post_init__(self):
         super().__post_init__()

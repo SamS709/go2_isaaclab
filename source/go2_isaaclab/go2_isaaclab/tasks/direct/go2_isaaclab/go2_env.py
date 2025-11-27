@@ -96,14 +96,13 @@ class Go2Env(DirectRLEnv):
             [
                 tensor
                 for tensor in (
-                    # self._robot.data.root_lin_vel_b + torch.randn_like(self._robot.data.root_lin_vel_b) * float(0.01),
-                    self._robot.data.root_ang_vel_b + torch.randn_like(self._robot.data.root_ang_vel_b) * float(0.01),
-                    # self._robot.data.projected_gravity_b + torch.randn_like(self._robot.data.projected_gravity_b) * float(0.01),
-                    self._robot.data.root_link_quat_w ,#+ torch.randn_like(self._robot.data.root_link_quat_w) * float(0.01), # no quaternion randomization for the moment 
+                    self._robot.data.root_lin_vel_b + torch.randn_like(self._robot.data.root_lin_vel_b) * float(0.02),
+                    self._robot.data.root_ang_vel_b + torch.randn_like(self._robot.data.root_ang_vel_b) * float(0.02),
+                    self._robot.data.projected_gravity_b + torch.randn_like(self._robot.data.projected_gravity_b) * float(0.02),
                     self._commands.get_command("base_velocity"),
                     self._commands.get_command("base_pos"),
                     self._robot.data.joint_pos - self._robot.data.default_joint_pos + torch.randn_like(self._robot.data.joint_pos) * float(0.03),
-                    self._robot.data.joint_vel + torch.randn_like(self._robot.data.joint_vel) * float(0.1),
+                    self._robot.data.joint_vel + torch.randn_like(self._robot.data.joint_vel) * float(0.05),
                     height_data,
                     self._actions,
                 )

@@ -48,3 +48,13 @@ gym.register(
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_distillation_ppo_cfg:Go2DistillationRunnerCfg",
     },
 )
+
+gym.register(
+    id="Isaac-Velocity-Go2-Student-Finetune-v0",
+    entry_point=f"{__name__}.go2_distillation_env:Go2StudentFineTuneEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.go2_distillation_env_cfg:Go2StudentFineTuneEnvCfg",
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_distillation_ppo_cfg:Go2StudentFinetuneRunnerCfg",
+    },
+)

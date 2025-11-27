@@ -15,6 +15,7 @@ from isaaclab_rl.rsl_rl import (
     RslRlOnPolicyRunnerCfg,
     RslRlPpoActorCriticRecurrentCfg,
     RslRlPpoAlgorithmCfg,
+    RslRlDistillationStudentTeacherCfg
 )
 
 
@@ -24,7 +25,7 @@ class Go2DistillationRunnerCfg(RslRlOnPolicyRunnerCfg):
     
     seed = 42
     num_steps_per_env = 24
-    max_iterations = 2000
+    max_iterations = 3000
     save_interval = 100
     experiment_name = "go2_distillation"
     run_name = "distillation"
@@ -56,22 +57,41 @@ class Go2DistillationRunnerCfg(RslRlOnPolicyRunnerCfg):
         student_obs_normalization=False,
         teacher_obs_normalization=False,
         
-        # Student network (limited observations)
-        student_hidden_dims=[256, 256, 256],
+        # Student network (limited observations) - matches actor architecture
+        student_hidden_dims=[128, 128],
         
-        # Teacher network (privileged observations)
-        teacher_hidden_dims=[256, 256, 256],
+        # Teacher network (privileged observations) - matches critic architecture
+        teacher_hidden_dims=[128, 128],
         
         activation="elu",
         
         # Recurrent network for student (helps compensate for missing velocity info)
         rnn_type="lstm",
-        rnn_hidden_dim=256,
-        rnn_num_layers=3,
-        
+        # rnn_hidden_dim=256,
+        # rnn_num_layers=3,
+        rnn_hidden_dim=64,
+        rnn_num_layers=2,
         # Teacher is typically not recurrent (has full state)
         teacher_recurrent=False,
     )
+    # policy = RslRlDistillationStudentTeacherCfg(
+    #     # Required parameters
+    #     init_noise_std=0.1,
+    #     noise_std_type="scalar",
+    #     student_obs_normalization=False,
+    #     teacher_obs_normalization=False,
+        
+    #     # Student network (limited observations) - will learn from scratch
+    #     student_hidden_dims=[128, 128],
+        
+    #     # Teacher network - MUST be [128, 128] to match ACTOR from checkpoint
+    #     # RSL-RL loads actor (not critic) as teacher for distillation
+    #     teacher_hidden_dims=[128, 128],
+        
+    #     activation="elu",
+        
+   
+    # )
 
 
 @configclass
@@ -80,7 +100,7 @@ class Go2StudentFinetuneRunnerCfg(RslRlOnPolicyRunnerCfg):
     
     seed = 42
     num_steps_per_env = 24
-    max_iterations = 3000
+    max_iterations = 6000
     save_interval = 100
     experiment_name = "go2_student_finetune"
     run_name = "student_finetune"
@@ -104,13 +124,13 @@ class Go2StudentFinetuneRunnerCfg(RslRlOnPolicyRunnerCfg):
     # Recurrent policy (same architecture as student from distillation)
     policy = RslRlPpoActorCriticRecurrentCfg(
         class_name="ActorCriticRecurrent",
-        init_noise_std=0.1,
-        actor_hidden_dims=[256, 256, 128],
-        critic_hidden_dims=[256, 256, 128],
+        init_noise_std=0.5,
+        actor_hidden_dims=[128, 128],
+        critic_hidden_dims=[128, 128],
         activation="elu",
         rnn_type="lstm",
-        rnn_hidden_dim=256,
-        rnn_num_layers=3,
+        rnn_hidden_dim=64,
+        rnn_num_layers=2,
     )
 
 
@@ -145,8 +165,8 @@ class Go2StudentPlayRunnerCfg(RslRlOnPolicyRunnerCfg):
     policy = RslRlPpoActorCriticRecurrentCfg(
         class_name="ActorCriticRecurrent",
         init_noise_std=0.0,  # No exploration noise during inference
-        actor_hidden_dims=[256, 256, 256],  # Match student architecture
-        critic_hidden_dims=[256, 256, 256],  # Match teacher architecture
+        actor_hidden_dims=[128, 128],  # Match student architecture
+        critic_hidden_dims=[256, 128],  # Match teacher architecture
         activation="elu",
         rnn_type="lstm",
         rnn_hidden_dim=256,

@@ -45,10 +45,10 @@ class Go2AsymmetricEnv(Go2Env):
         self._previous_actions = self._actions.clone()
         
         # Add noise to raw observations
-        base_lin_vel_noisy = self._robot.data.root_lin_vel_b + torch.randn_like(self._robot.data.root_lin_vel_b) * 0.01
-        base_ang_vel_noisy = self._robot.data.root_ang_vel_b + torch.randn_like(self._robot.data.root_ang_vel_b) * 0.01
-        raw_imu_data = self._robot.data.root_link_quat_w #+ torch.randn_like(self._robot.data.root_link_quat_w) * float(0.01), # no quaternion randomization for the moment 
-        # projected_gravity_noisy = self._robot.data.projected_gravity_b + torch.randn_like(self._robot.data.projected_gravity_b) * 0.01
+        base_lin_vel_noisy = self._robot.data.root_lin_vel_b + torch.randn_like(self._robot.data.root_lin_vel_b) * 0.02
+        base_ang_vel_noisy = self._robot.data.root_ang_vel_b + torch.randn_like(self._robot.data.root_ang_vel_b) * 0.02
+        # raw_imu_data = self._robot.data.root_link_quat_w #+ torch.randn_like(self._robot.data.root_link_quat_w) * float(0.01), # no quaternion randomization for the moment 
+        projected_gravity_noisy = self._robot.data.projected_gravity_b + torch.randn_like(self._robot.data.projected_gravity_b) * 0.02
         joint_pos_noisy = (self._robot.data.joint_pos - self._robot.data.default_joint_pos) + torch.randn_like(self._robot.data.joint_pos) * 0.03
         joint_vel_noisy = self._robot.data.joint_vel + torch.randn_like(self._robot.data.joint_vel) * 0.1
         
@@ -61,8 +61,8 @@ class Go2AsymmetricEnv(Go2Env):
         actor_obs = torch.cat(
             [
                 base_ang_vel_noisy,                # 3
-                raw_imu_data,                      # 4
-                # projected_gravity_noisy,           # 3
+                # raw_imu_data,                      # 4
+                projected_gravity_noisy,           # 3
                 velocity_commands,                 # 3
                 position_commands,                 # 1
                 joint_pos_noisy,                   # 12
@@ -78,8 +78,8 @@ class Go2AsymmetricEnv(Go2Env):
             [
                 base_lin_vel_noisy,                # 3 - PRIVILEGED!
                 base_ang_vel_noisy,                # 3
-                raw_imu_data,                      # 4
-                # projected_gravity_noisy,           # 3
+                # raw_imu_data,                      # 4
+                projected_gravity_noisy,           # 3
                 velocity_commands,                 # 3
                 position_commands,                 # 1
                 joint_pos_noisy,                   # 12
