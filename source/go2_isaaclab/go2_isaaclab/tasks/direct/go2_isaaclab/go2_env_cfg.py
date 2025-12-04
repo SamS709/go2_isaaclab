@@ -100,8 +100,8 @@ class EventCfg:
       mode="reset",
       params={
           "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
-          "stiffness_distribution_params": (0.7, 1.4),
-          "damping_distribution_params": (0.3,1.0),
+          "stiffness_distribution_params": (0.9, 1.1),
+          "damping_distribution_params": (0.9,1.1),
           "operation": "scale",
           "distribution": "uniform",
       },
@@ -125,12 +125,22 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
-            "static_friction_range": (0.55, 2.0),
-            "dynamic_friction_range": (0.55, 1.5),
-            "restitution_range": (0.0, 0.1),
+            "static_friction_range": (0.5, 1.0),
+            "dynamic_friction_range": (0.5, 0.7),
+            "restitution_range": (0.0, 0.01),
             "num_buckets": 64,
         },
     )
+    
+    reset_robot_joints = EventTerm(
+        func=mdp.reset_joints_by_scale,
+        mode="reset",
+        params={
+            "position_range": (0.5, 1.5),
+            "velocity_range": (0.1, 0.1),
+        },
+    )
+
 
     add_base_mass = EventTerm(
         func=mdp.randomize_rigid_body_mass,
@@ -141,6 +151,16 @@ class EventCfg:
             "operation": "add",
         },
     )
+    
+    base_com = EventTerm(
+        func=mdp.randomize_rigid_body_com,
+        mode="startup",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names="base"),
+            "com_range": {"x": (-0.1, 0.1), "y": (-0.05, 0.05), "z": (-0.01, 0.01)},
+        },
+    )
+
     
     # interval
     push_robot = EventTerm(
@@ -157,7 +177,7 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
     decimation = 4
     action_scale = 0.5
     action_space = 12
-    observation_space = 50
+    observation_space = 51
     state_space = 0
 
     # classic imulation (comment if you are in Newton Isaaclab's branch)
@@ -238,7 +258,7 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
     action_rate_reward_scale = -0.01
     feet_air_time_reward_scale = 0.25
     flat_orientation_reward_scale = -2.5
-    feet_distance_reward_scale = 1.0
+    feet_distance_reward_scale = 0.0
 
 
 

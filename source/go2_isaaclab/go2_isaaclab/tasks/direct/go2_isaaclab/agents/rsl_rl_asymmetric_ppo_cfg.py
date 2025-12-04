@@ -20,7 +20,7 @@ class Go2AsymmetricPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     return dict: {"policy": actor_obs, "critic": critic_obs}
     """
     num_steps_per_env = 24
-    max_iterations = 10000
+    max_iterations = 20000
     save_interval = 50
     experiment_name = "go2_asymmetric"
     
@@ -34,16 +34,28 @@ class Go2AsymmetricPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     #     critic_hidden_dims=[256, 256, 256],
     #     activation="elu",
     # )
+    # policy = RslRlPpoActorCriticRecurrentCfg(
+    #     init_noise_std=1.0,
+    #     actor_obs_normalization=False,
+    #     critic_obs_normalization=False,
+    #     actor_hidden_dims=[128, 128],
+    #     critic_hidden_dims=[256, 128],
+    #     activation="elu",
+    #     rnn_type="lstm",
+    #     rnn_hidden_dim=64,
+    #     rnn_num_layers=2
+    # )
+    
     policy = RslRlPpoActorCriticRecurrentCfg(
         init_noise_std=1.0,
         actor_obs_normalization=False,
         critic_obs_normalization=False,
-        actor_hidden_dims=[128, 128],
-        critic_hidden_dims=[256, 128],
+        actor_hidden_dims=[32],
+        critic_hidden_dims=[32],
         activation="elu",
         rnn_type="lstm",
         rnn_hidden_dim=64,
-        rnn_num_layers=2
+        rnn_num_layers=1
     )
     
     algorithm = RslRlPpoAlgorithmCfg(
