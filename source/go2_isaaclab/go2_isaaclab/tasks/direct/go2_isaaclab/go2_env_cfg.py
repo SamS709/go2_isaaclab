@@ -123,7 +123,7 @@ class EventCfg:
     
     physics_material = EventTerm(
         func=mdp.randomize_rigid_body_material,
-        mode="startup",
+        mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
             "static_friction_range": (0.3, 1.2),
@@ -181,7 +181,7 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
     observation_space = 51
     state_space = 0
 
-    # classic imulation (comment if you are in Newton Isaaclab's branch)
+    # classic simulation (comment if you are in Newton Isaaclab's branch)
     
     sim: SimulationCfg = SimulationCfg(
         dt=1 / 200,
