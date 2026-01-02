@@ -52,10 +52,11 @@ class Go2Env(DirectRLEnv):
         # Get specific body indices
         self._base_id, _ = self._contact_sensor.find_bodies("base")
         self._feet_ids, _ = self._contact_sensor.find_bodies(".*foot")
+        # print(_)
         
         # Gait phase tracking
-        self.gait_frequency = 2.0  # Hz - typical trotting frequency
-        self.phase = torch.zeros(self.num_envs, device=self.device)
+        # self.gait_frequency = 2.0  # Hz - typical trotting frequency
+        # self.phase = torch.zeros(self.num_envs, device=self.device)
         
     def _setup_scene(self):
         self._robot = Articulation(self.cfg.robot)
@@ -97,11 +98,11 @@ class Go2Env(DirectRLEnv):
         self._previous_actions = self._actions.clone()
         
         # Update gait phase (increment by dt * frequency, wrap to [0, 1])
-        self.phase = (self.phase + self.step_dt * self.gait_frequency) % 1.0
+        # self.phase = (self.phase + self.step_dt * self.gait_frequency) % 1.0
         
         # Encode phase as sin/cos (continuous representation)
-        sin_phase = torch.sin(2 * torch.pi * self.phase).unsqueeze(1)
-        cos_phase = torch.cos(2 * torch.pi * self.phase).unsqueeze(1)
+        # sin_phase = torch.sin(2 * torch.pi * self.phase).unsqueeze(1)
+        # cos_phase = torch.cos(2 * torch.pi * self.phase).unsqueeze(1)
         self.projected_gravity = quat_apply_inverse(
             self._robot.data.root_quat_w, torch.tensor([0.0, 0.0, -1.0], device=self.device).repeat(self.num_envs, 1)
         )
@@ -123,8 +124,8 @@ class Go2Env(DirectRLEnv):
                     self._robot.data.joint_pos - self._robot.data.default_joint_pos + (2.0 * torch.rand_like(self._robot.data.default_joint_pos) - 1.0) * float(0.01),
                     self._robot.data.joint_vel + (2.0 * torch.rand_like(self._robot.data.default_joint_pos) - 1.0) * float(0.5),
                     self._actions,
-                    sin_phase,
-                    cos_phase,
+                    # sin_phase,
+                    # cos_phase,
                     foot_contacts,
                 )
                 if tensor is not None
@@ -215,7 +216,7 @@ class Go2Env(DirectRLEnv):
         self._previous_actions[env_ids] = 0.0
         
         # Reset gait phase (randomize initial phase for diversity)
-        self.phase[env_ids] = torch.rand(len(env_ids), device=self.device)
+        # self.phase[env_ids] = torch.rand(len(env_ids), device=self.device)
         
         # Reset robot state
         joint_pos = self._robot.data.default_joint_pos[env_ids]

@@ -7,6 +7,7 @@
 
 import isaaclab.envs.mdp as mdp
 import isaaclab.sim as sim_utils
+import isaaclab.terrains as terrain_gen
 from isaaclab.assets import ArticulationCfg
 from isaaclab.envs import DirectRLEnvCfg
 from isaaclab.managers import EventTermCfg as EventTerm
@@ -125,9 +126,9 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
-            "static_friction_range": (0.5, 1.0),
-            "dynamic_friction_range": (0.5, 0.7),
-            "restitution_range": (0.0, 0.01),
+            "static_friction_range": (0.3, 1.2),
+            "dynamic_friction_range": (0.3, 1.2),
+            "restitution_range": (0.0, 0.15),
             "num_buckets": 64,
         },
     )
@@ -166,7 +167,7 @@ class EventCfg:
     push_robot = EventTerm(
         func=mdp.push_by_setting_velocity,
         mode="interval",
-        interval_range_s=(3.0, 7.0),
+        interval_range_s=(5.0, 10.0),
         params={"velocity_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5)}},
     )
 
@@ -175,7 +176,7 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
     # env
     episode_length_s = 20.0
     decimation = 4
-    action_scale = 0.5
+    action_scale = 0.25
     action_space = 12
     observation_space = 51
     state_space = 0
@@ -221,7 +222,25 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
     
     terrain = TerrainImporterCfg(
         prim_path="/World/ground",
-        terrain_type="plane",
+        terrain_type="generator",
+        terrain_generator=terrain_gen.TerrainGeneratorCfg(
+            size=(8.0, 8.0),
+            border_width=20.0,
+            num_rows=10,
+            num_cols=20,
+            horizontal_scale=0.1,
+            vertical_scale=0.005,
+            slope_threshold=0.75,
+            difficulty_range=(0.0, 1.0),
+            use_cache=False,
+            sub_terrains={
+                "flat": terrain_gen.MeshPlaneTerrainCfg(proportion=0.6),
+                "random_rough": terrain_gen.HfRandomUniformTerrainCfg(
+                    proportion=0.4, noise_range=(0.008, 0.03), noise_step=0.008, border_width=0.25
+                ),
+            },
+        ),
+        max_init_terrain_level=2,
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
             friction_combine_mode="multiply",
@@ -248,17 +267,14 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
     )
 
     # reward scales
-    lin_vel_reward_scale = 1.5 # replace by 1.5 for env without damping and switfness randomization
+    lin_vel_reward_scale = 2.0 # replace by 1.5 for env without damping and switfness randomization
     yaw_rate_reward_scale = 0.75
     base_z_reward_scale = 0.7
-    z_vel_reward_scale = -2.0
+    z_vel_reward_scale = -0.5
     ang_vel_reward_scale = -0.05
     joint_torque_reward_scale = -0.0002
     joint_accel_reward_scale = -2.5e-7
-    action_rate_reward_scale = -0.01
-    feet_air_time_reward_scale = 0.25
+    action_rate_reward_scale = -0.1
+    feet_air_time_reward_scale = 0.1
     flat_orientation_reward_scale = -2.5
     feet_distance_reward_scale = 0.0
-
-
-
