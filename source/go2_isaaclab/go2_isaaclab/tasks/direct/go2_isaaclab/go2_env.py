@@ -43,19 +43,14 @@ class Go2Env(DirectRLEnv):
                 "dof_acc_l2",
                 "action_rate_l2",
                 "feet_air_time",
-                # "undesired_contacts",
                 "flat_orientation_l2",
-                # "base_pos_l2",
                 "feet_dist_error",
             ]
         }
         # Get specific body indices
         self._base_id, _ = self._contact_sensor.find_bodies("base")
         self._feet_ids, _ = self._contact_sensor.find_bodies(".*foot")
-        
-        # Gait phase tracking
-        self.gait_frequency = 2.0  # Hz - typical trotting frequency
-        self.phase = torch.zeros(self.num_envs, device=self.device)
+        # print(_)
         
     def _setup_scene(self):
         self._robot = Articulation(self.cfg.robot)
@@ -95,19 +90,11 @@ class Go2Env(DirectRLEnv):
 
     def _get_observations(self) -> dict:
         self._previous_actions = self._actions.clone()
-        
-        # Update gait phase (increment by dt * frequency, wrap to [0, 1])
-        self.phase = (self.phase + self.step_dt * self.gait_frequency) % 1.0
-        
-        # Encode phase as sin/cos (continuous representation)
-        sin_phase = torch.sin(2 * torch.pi * self.phase).unsqueeze(1)
-        cos_phase = torch.cos(2 * torch.pi * self.phase).unsqueeze(1)
+
         self.projected_gravity = quat_apply_inverse(
             self._robot.data.root_quat_w, torch.tensor([0.0, 0.0, -1.0], device=self.device).repeat(self.num_envs, 1)
         )
-        
-        # Get foot contact states (binary: 1 if in contact, 0 otherwise)
-        # Contact force threshold: consider in contact if force > 1.0 N
+
         foot_contacts = (torch.norm(self._contact_sensor.data.net_forces_w[:, self._feet_ids], dim=-1) > 1.0).float()
         
         # observations with noise added
@@ -123,8 +110,7 @@ class Go2Env(DirectRLEnv):
                     self._robot.data.joint_pos - self._robot.data.default_joint_pos + (2.0 * torch.rand_like(self._robot.data.default_joint_pos) - 1.0) * float(0.01),
                     self._robot.data.joint_vel + (2.0 * torch.rand_like(self._robot.data.default_joint_pos) - 1.0) * float(0.5),
                     self._actions,
-                    sin_phase,
-                    cos_phase,
+
                     foot_contacts,
                 )
                 if tensor is not None
@@ -172,7 +158,6 @@ class Go2Env(DirectRLEnv):
         f_dist_squarred = torch.sum(torch.square(self._robot.data.body_pos_w[:,fl_foot_id,:2]-self._robot.data.body_pos_w[:,fr_foot_id,:2]), dim = 1)
         r_dist_squarred = torch.sum(torch.square(self._robot.data.body_pos_w[:,rl_foot_id,:2]-self._robot.data.body_pos_w[:,rr_foot_id,:2]), dim = 1)
         dist_threshold = 0.2 # dist between feet shouldn't be under that value (in meter)
-        feet_dist_error = torch.min((f_dist_squarred - dist_threshold**2) + (r_dist_squarred - dist_threshold**2), torch.zeros(self.num_envs,device=self.device))
         
         rewards = {
             "track_lin_vel_xy_exp": lin_vel_error_mapped * self.cfg.lin_vel_reward_scale * self.step_dt,
@@ -185,7 +170,6 @@ class Go2Env(DirectRLEnv):
             "action_rate_l2": action_rate * self.cfg.action_rate_reward_scale * self.step_dt,
             "feet_air_time": air_time * self.cfg.feet_air_time_reward_scale * self.step_dt,
             "flat_orientation_l2": flat_orientation * self.cfg.flat_orientation_reward_scale * self.step_dt,
-            # "feet_dist_error": feet_dist_error * self.cfg.feet_distance_reward_scale *  self.step_dt,
         }
         reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
         # Logging
@@ -213,9 +197,6 @@ class Go2Env(DirectRLEnv):
             self.episode_length_buf[:] = torch.randint_like(self.episode_length_buf, high=int(self.max_episode_length))
         self._actions[env_ids] = 0.0
         self._previous_actions[env_ids] = 0.0
-        
-        # Reset gait phase (randomize initial phase for diversity)
-        self.phase[env_ids] = torch.rand(len(env_ids), device=self.device)
         
         # Reset robot state
         joint_pos = self._robot.data.default_joint_pos[env_ids]

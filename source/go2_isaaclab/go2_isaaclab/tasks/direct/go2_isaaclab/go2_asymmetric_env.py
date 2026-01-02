@@ -45,11 +45,11 @@ class Go2AsymmetricEnv(Go2Env):
         self._previous_actions = self._actions.clone()
         
         # Update gait phase (increment by dt * frequency, wrap to [0, 1])
-        self.phase = (self.phase + self.step_dt * self.gait_frequency) % 1.0
+        # self.phase = (self.phase + self.step_dt * self.gait_frequency) % 1.0
         
         # Encode phase as sin/cos (continuous representation)
-        sin_phase = torch.sin(2 * torch.pi * self.phase).unsqueeze(1)
-        cos_phase = torch.cos(2 * torch.pi * self.phase).unsqueeze(1)
+        # sin_phase = torch.sin(2 * torch.pi * self.phase).unsqueeze(1)
+        # cos_phase = torch.cos(2 * torch.pi * self.phase).unsqueeze(1)
         
         
         base_lin_vel_noisy = self._robot.data.root_lin_vel_b + (2.0 * torch.rand_like(self._robot.data.root_lin_vel_b) - 1.0) * float(0.1) * randomize
@@ -64,9 +64,10 @@ class Go2AsymmetricEnv(Go2Env):
         
         # Get foot contact states (binary: 1 if in contact, 0 otherwise)
         foot_contacts = (torch.norm(self._contact_sensor.data.net_forces_w[:, self._feet_ids], dim=-1) > 1.0).float()
+        # print("Feet names:", [self._robot.body_names[i] for i in self._feet_ids])        
         
         # Actor observations (NO linear velocity - this is the key limitation!)
-        # Components: base_ang_vel(3) + proj_gravity(3) + vel_cmd(3) + pos_cmd(1) + joint_pos(12) + joint_vel(12) + actions(12) + sin_phase(1) + cos_phase(1) + contacts(4) = 52
+        # Components: base_ang_vel(3) + proj_gravity(3) + vel_cmd(3) + pos_cmd(1) + joint_pos(12) + joint_vel(12) + actions(12) + contacts(4) = 50
         actor_obs = torch.cat(
             [
                 base_ang_vel_noisy,                # 3
@@ -76,14 +77,14 @@ class Go2AsymmetricEnv(Go2Env):
                 joint_pos_noisy,                   # 12
                 joint_vel_noisy,                   # 12
                 self._actions,                     # 12
-                sin_phase,                         # 1
-                cos_phase,                         # 1
+                # sin_phase,                         # 1
+                # cos_phase,                         # 1
                 foot_contacts,                     # 4
             ],
             dim=-1,
         )
         # Critic observations (HAS linear velocity - privileged information!)
-        # Components: base_lin_vel(3) + base_ang_vel(3) + proj_gravity(3) + vel_cmd(3) + pos_cmd(1) + joint_pos(12) + joint_vel(12) + actions(12) + sin_phase(1) + cos_phase(1) + contacts(4) = 55
+        # Components: base_lin_vel(3) + base_ang_vel(3) + proj_gravity(3) + vel_cmd(3) + pos_cmd(1) + joint_pos(12) + joint_vel(12) + actions(12) + contacts(4) = 53
         critic_obs = torch.cat(
             [
                 base_lin_vel_noisy,                # 3 - PRIVILEGED!
@@ -94,8 +95,8 @@ class Go2AsymmetricEnv(Go2Env):
                 joint_pos_noisy,                   # 12
                 joint_vel_noisy,                   # 12
                 self._actions,                     # 12
-                sin_phase,                         # 1
-                cos_phase,                         # 1
+                # sin_phase,                         # 1
+                # cos_phase,                         # 1
                 foot_contacts,                     # 4
             ],
             dim=-1,
@@ -108,8 +109,8 @@ class Go2AsymmetricEnv(Go2Env):
             # For simplicity, using same delay here
         
         return {
-            "policy": actor_obs,    # Actor network sees this (47 dims)
-            "critic": critic_obs,   # Critic network sees this (50 dims)
+            "policy": actor_obs,    # Actor network sees this (50 dims)
+            "critic": critic_obs,   # Critic network sees this (53 dims)
         }
 
 
