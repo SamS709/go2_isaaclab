@@ -50,7 +50,8 @@ class Go2Env(DirectRLEnv):
         # Get specific body indices
         self._base_id, _ = self._contact_sensor.find_bodies("base")
         self._feet_ids, _ = self._contact_sensor.find_bodies(".*foot")
-        # print(_)
+        
+        print(_)
         
     def _setup_scene(self):
         self._robot = Articulation(self.cfg.robot)
@@ -110,7 +111,6 @@ class Go2Env(DirectRLEnv):
                     self._robot.data.joint_pos - self._robot.data.default_joint_pos + (2.0 * torch.rand_like(self._robot.data.default_joint_pos) - 1.0) * float(0.01),
                     self._robot.data.joint_vel + (2.0 * torch.rand_like(self._robot.data.default_joint_pos) - 1.0) * float(0.5),
                     self._actions,
-
                     foot_contacts,
                 )
                 if tensor is not None
@@ -150,14 +150,7 @@ class Go2Env(DirectRLEnv):
         # flat orientation
         flat_orientation = torch.sum(torch.square(self._robot.data.projected_gravity_b[:, :2]), dim=1)
         
-        # feet distance
-        fl_foot_id = 15
-        fr_foot_id = 16
-        rl_foot_id = 17
-        rr_foot_id = 18
-        f_dist_squarred = torch.sum(torch.square(self._robot.data.body_pos_w[:,fl_foot_id,:2]-self._robot.data.body_pos_w[:,fr_foot_id,:2]), dim = 1)
-        r_dist_squarred = torch.sum(torch.square(self._robot.data.body_pos_w[:,rl_foot_id,:2]-self._robot.data.body_pos_w[:,rr_foot_id,:2]), dim = 1)
-        dist_threshold = 0.2 # dist between feet shouldn't be under that value (in meter)
+    
         
         rewards = {
             "track_lin_vel_xy_exp": lin_vel_error_mapped * self.cfg.lin_vel_reward_scale * self.step_dt,

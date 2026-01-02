@@ -275,8 +275,5 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
     feet_air_time_reward_scale = 0.1
     flat_orientation_reward_scale = -2.5
     feet_distance_reward_scale = 0.0
-<<<<<<< HEAD
 
 
-=======
->>>>>>> feature/new_params
