@@ -52,6 +52,7 @@ class Go2Env(DirectRLEnv):
         # Get specific body indices
         self._base_id, _ = self._contact_sensor.find_bodies("base")
         self._feet_ids, _ = self._contact_sensor.find_bodies(".*foot")
+        # print(_)
         
         # Gait phase tracking
         self.gait_frequency = 2.0  # Hz - typical trotting frequency
@@ -123,8 +124,8 @@ class Go2Env(DirectRLEnv):
                     self._robot.data.joint_pos - self._robot.data.default_joint_pos + (2.0 * torch.rand_like(self._robot.data.default_joint_pos) - 1.0) * float(0.01),
                     self._robot.data.joint_vel + (2.0 * torch.rand_like(self._robot.data.default_joint_pos) - 1.0) * float(0.5),
                     self._actions,
-                    sin_phase,
-                    cos_phase,
+                    # sin_phase,
+                    # cos_phase,
                     foot_contacts,
                 )
                 if tensor is not None
