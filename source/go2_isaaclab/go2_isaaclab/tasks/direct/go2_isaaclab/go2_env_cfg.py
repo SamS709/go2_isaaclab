@@ -60,7 +60,9 @@ class CommandsCfg:
 class EventCfg:
     """Configuration for randomization."""
     
-    # (comment reset_robot_joints) if you are in Newton Isaaclab's branch)
+# Comment reset_robot_joints if you are in Newton Isaaclab's branch)
+# ------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------
     reset_robot_joints = EventTerm(
         func=mdp.reset_joints_by_offset,
         mode="reset",
@@ -70,6 +72,8 @@ class EventCfg:
             "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
         },
     )
+# ------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------
     
     reset_robot_base = EventTerm(
         func=mdp.reset_root_state_uniform,
@@ -107,18 +111,6 @@ class EventCfg:
       },
   )
     
-#     physics_material = EventTerm(
-#         func=mdp.randomize_rigid_body_material,
-#         mode="reset",
-#         params={
-#             "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
-#             "static_friction_range": (0.35, 0.95),
-#             "dynamic_friction_range": (0.40, 0.65),
-#             "restitution_range": (0.0, 0.07),
-#             "num_buckets": 64,
-#         },
-#     )
-
     
     physics_material = EventTerm(
         func=mdp.randomize_rigid_body_material,
@@ -180,8 +172,9 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
     observation_space = 51
     state_space = 0
 
-    # classic imulation (comment if you are in Newton Isaaclab's branch)
-    
+# classic imulation (comment if you are in Newton Isaaclab's branch)
+# ------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------
     sim: SimulationCfg = SimulationCfg(
         dt=1 / 200,
         render_interval=decimation,
@@ -193,9 +186,12 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
             restitution=0.0,
         ),
     )
+# ------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------
     
-    # MuJoCo simulation (uncomment if you are in Newton Isaaclab's branch)
-    
+# MuJoCo simulation (uncomment if you are in Newton Isaaclab's branch)
+# ------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------
     # solver_cfg = MJWarpSolverCfg(
     #     njmax=150,
     #     ncon_per_env=35,
@@ -217,7 +213,8 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
     #     render_interval=decimation,
     #     newton_cfg=newton_cfg,
     # )
-
+# ------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------
     
     terrain = TerrainImporterCfg(
         prim_path="/World/ground",
@@ -261,5 +258,3 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
     feet_distance_reward_scale = 0.0
 
 
-
-###
