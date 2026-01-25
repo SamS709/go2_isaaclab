@@ -40,21 +40,14 @@ gym.register(
 )
 
 gym.register(
-    id="Isaac-Velocity-Go2-Distillation-v0",
-    entry_point=f"{__name__}.go2_distillation_env:Go2TeacherStudentEnv",
+    id="Isaac-Velocity-Go2-Asymmetric-Lidar-v0",
+    entry_point=f"{__name__}.go2_asymmetric_env:Go2AsymmetricLidarEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": f"{__name__}.go2_distillation_env_cfg:Go2TeacherStudentEnvCfg",
-        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_distillation_ppo_cfg:Go2DistillationRunnerCfg",
+        "env_cfg_entry_point": f"{__name__}.go2_asymmetric_env_cfg:Go2AsymmetricLidarEnvCfg",
+        "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_flat_ppo_cfg.yaml",
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_asymmetric_lidar_ppo_cfg:Go2AsymmetricPPORunnerCfg",
+        "skrl_cfg_entry_point": f"{agents.__name__}:skrl_flat_ppo_cfg.yaml",
     },
 )
 
-gym.register(
-    id="Isaac-Velocity-Go2-Student-Finetune-v0",
-    entry_point=f"{__name__}.go2_distillation_env:Go2StudentFineTuneEnv",
-    disable_env_checker=True,
-    kwargs={
-        "env_cfg_entry_point": f"{__name__}.go2_distillation_env_cfg:Go2StudentFineTuneEnvCfg",
-        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_distillation_ppo_cfg:Go2StudentFinetuneRunnerCfg",
-    },
-)
