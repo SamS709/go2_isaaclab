@@ -9,7 +9,7 @@ This script demonstrates an interactive demo with the H1 rough terrain environme
 .. code-block:: bash
 
     # Usage
-    python scripts/control/go2_locomotion.py --checkpoint pretrained_checkpoint/pretrained_checkpoint.pt
+    python scripts/control/go2_locomotion.py --checkpoint pretrained_checkpoint/model_24600.pt
 """
 
 
@@ -55,12 +55,12 @@ from isaaclab.envs import DirectRLEnv
 from isaaclab.utils.math import quat_apply
 from isaaclab.utils.pretrained_checkpoint import get_published_pretrained_checkpoint
 
-from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlVecEnvWrapper
+from isaaclab_rl.rsl_rl import RslRlBaseRunnerCfg, RslRlVecEnvWrapper
 
 from isaaclab_tasks.manager_based.locomotion.velocity.config.h1.rough_env_cfg import H1RoughEnvCfg_PLAY
-from go2_isaaclab.tasks.direct.go2_isaaclab.go2_env_cfg import Go2FlatEnvCfg
+from go2_isaaclab.tasks.direct.go2_isaaclab.go2_asymmetric_env_cfg import Go2AsymmetricEnvCfg
 
-TASK = "Isaac-Velocity-Go2-Direct-v0"
+TASK = "Isaac-Velocity-Go2-Asymmetric-v0"
 RL_LIBRARY = "rsl_rl"
 
 
@@ -82,7 +82,7 @@ class Go2FlatDemo:
     def __init__(self):
         """Initializes environment config designed for the interactive model and sets up the environment,
         loads pre-trained checkpoints, and registers keyboard events."""
-        agent_cfg: RslRlOnPolicyRunnerCfg = cli_args.parse_rsl_rl_cfg(TASK, args_cli)
+        agent_cfg: RslRlBaseRunnerCfg = cli_args.parse_rsl_rl_cfg(TASK, args_cli)
         
         # Try to load checkpoint
         if args_cli.checkpoint:
@@ -100,7 +100,7 @@ class Go2FlatDemo:
             print(f"[INFO] Loading pretrained checkpoint: {checkpoint}")
         
         # create environment configuration
-        env_cfg = Go2FlatEnvCfg()
+        env_cfg = Go2AsymmetricEnvCfg()
         env_cfg.scene.num_envs = 25
         env_cfg.episode_length_s = 1000000
         env_cfg.commands.base_velocity.ranges.lin_vel_x = (0.0, 1.0)
@@ -268,11 +268,12 @@ def main():
             demo_go2.env.unwrapped._commands._terms["base_pos"].command[:] = demo_go2.commands[:, 3:4]
             
             # Run policy
+            print(obs["policy"].shape)
             action = demo_go2.policy(obs)
             obs, _, _, _ = demo_go2.env.step(action)
             
             # Update observation with current commands (for policy input)
-            obs[:, 9:13] = demo_go2.commands
+            obs[:, 6:10] = demo_go2.commands
 
 
 if __name__ == "__main__":

@@ -12,11 +12,11 @@ from isaaclab.utils.buffers import DelayBuffer
 import isaaclab.sim as sim_utils
 from isaaclab.assets import Articulation
 from isaaclab.envs import DirectRLEnv
-from isaaclab.sensors import ContactSensor
-from isaaclab.managers import CommandManager
+from isaaclab.sensors import ContactSensor, RayCaster
+from isaaclab.managers import CommandManager, CurriculumManager
 from isaaclab.utils.math import quat_apply_inverse
 
-from .go2_env_cfg import Go2FlatEnvCfg
+from .go2_env_cfg import Go2FlatEnvCfg, Go2LidarEnvCfg
 
 
 class Go2Env(DirectRLEnv):
@@ -43,25 +43,23 @@ class Go2Env(DirectRLEnv):
                 "dof_acc_l2",
                 "action_rate_l2",
                 "feet_air_time",
-                # "undesired_contacts",
                 "flat_orientation_l2",
-                # "base_pos_l2",
-                "feet_dist_error",
+                "default_pos",
+                "feet_var",
+                "energy"
             ]
         }
         # Get specific body indices
         self._base_id, _ = self._contact_sensor.find_bodies("base")
         self._feet_ids, _ = self._contact_sensor.find_bodies(".*foot")
         
-        # Gait phase tracking
-        self.gait_frequency = 2.0  # Hz - typical trotting frequency
-        self.phase = torch.zeros(self.num_envs, device=self.device)
+        print(_)
         
     def _setup_scene(self):
         self._robot = Articulation(self.cfg.robot)
         self.scene.articulations["robot"] = self._robot
         self._commands = CommandManager(self.cfg.commands, self)
-        self.history_length = 3
+        self.history_length = 2
         self.delay = True
         if self.delay == True:
             self._buffer = DelayBuffer(history_length=self.history_length, batch_size=self.num_envs, device=self.device)
@@ -95,19 +93,11 @@ class Go2Env(DirectRLEnv):
 
     def _get_observations(self) -> dict:
         self._previous_actions = self._actions.clone()
-        
-        # Update gait phase (increment by dt * frequency, wrap to [0, 1])
-        self.phase = (self.phase + self.step_dt * self.gait_frequency) % 1.0
-        
-        # Encode phase as sin/cos (continuous representation)
-        sin_phase = torch.sin(2 * torch.pi * self.phase).unsqueeze(1)
-        cos_phase = torch.cos(2 * torch.pi * self.phase).unsqueeze(1)
+
         self.projected_gravity = quat_apply_inverse(
             self._robot.data.root_quat_w, torch.tensor([0.0, 0.0, -1.0], device=self.device).repeat(self.num_envs, 1)
         )
-        
-        # Get foot contact states (binary: 1 if in contact, 0 otherwise)
-        # Contact force threshold: consider in contact if force > 1.0 N
+
         foot_contacts = (torch.norm(self._contact_sensor.data.net_forces_w[:, self._feet_ids], dim=-1) > 1.0).float()
         
         # observations with noise added
@@ -123,8 +113,6 @@ class Go2Env(DirectRLEnv):
                     self._robot.data.joint_pos - self._robot.data.default_joint_pos + (2.0 * torch.rand_like(self._robot.data.default_joint_pos) - 1.0) * float(0.01),
                     self._robot.data.joint_vel + (2.0 * torch.rand_like(self._robot.data.default_joint_pos) - 1.0) * float(0.5),
                     self._actions,
-                    sin_phase,
-                    cos_phase,
                     foot_contacts,
                 )
                 if tensor is not None
@@ -158,22 +146,26 @@ class Go2Env(DirectRLEnv):
         # feet air time
         first_contact = self._contact_sensor.compute_first_contact(self.step_dt)[:, self._feet_ids]
         last_air_time = self._contact_sensor.data.last_air_time[:, self._feet_ids]
-        air_time = torch.sum(torch.exp(-torch.square(0.5-last_air_time)/0.01) * first_contact, dim=1) * (
+        air_time = torch.sum(torch.exp(-torch.square(0.4-last_air_time)/0.01) * first_contact, dim=1) * (
             torch.norm(self._commands.get_command("base_pos")[:, :2], dim=1) > 0.1
         ) 
         # flat orientation
         flat_orientation = torch.sum(torch.square(self._robot.data.projected_gravity_b[:, :2]), dim=1)
         
-        # feet distance
-        fl_foot_id = 15
-        fr_foot_id = 16
-        rl_foot_id = 17
-        rr_foot_id = 18
-        f_dist_squarred = torch.sum(torch.square(self._robot.data.body_pos_w[:,fl_foot_id,:2]-self._robot.data.body_pos_w[:,fr_foot_id,:2]), dim = 1)
-        r_dist_squarred = torch.sum(torch.square(self._robot.data.body_pos_w[:,rl_foot_id,:2]-self._robot.data.body_pos_w[:,rr_foot_id,:2]), dim = 1)
-        dist_threshold = 0.2 # dist between feet shouldn't be under that value (in meter)
-        feet_dist_error = torch.min((f_dist_squarred - dist_threshold**2) + (r_dist_squarred - dist_threshold**2), torch.zeros(self.num_envs,device=self.device))
+        # stay around default pos:        
+        cmd = torch.linalg.norm(self._commands.get_command("base_velocity"), dim=1)
+        body_vel = torch.linalg.norm(self._robot.data.root_lin_vel_b[:, :2], dim=1)
+        rew = torch.linalg.norm((self._robot.data.joint_pos - self._robot.data.default_joint_pos), dim=1)
+        def_pos = torch.where(torch.logical_or(cmd > 0.0, body_vel > self.cfg.velocity_threshold), rew, self.cfg.stand_still_scale * rew)
         
+        #Penalize variance in the amount of time each foot spends in the air/on the ground relative to each other
+        last_air_time = self._contact_sensor.data.last_air_time[:, self._feet_ids]
+        last_contact_time = self._contact_sensor.data.last_contact_time[:, self._feet_ids]
+        feet_var =  torch.var(torch.clip(last_air_time, max=0.5), dim=1) + torch.var(torch.clip(last_contact_time, max=0.5), dim=1)
+        
+        # energy consumption (power = |torque| * |velocity|)
+        energy = torch.sum(torch.abs(self._robot.data.joint_vel) * torch.abs(self._robot.data.applied_torque), dim=-1)
+
         rewards = {
             "track_lin_vel_xy_exp": lin_vel_error_mapped * self.cfg.lin_vel_reward_scale * self.step_dt,
             "track_ang_vel_z_exp": yaw_rate_error_mapped * self.cfg.yaw_rate_reward_scale * self.step_dt,
@@ -185,7 +177,9 @@ class Go2Env(DirectRLEnv):
             "action_rate_l2": action_rate * self.cfg.action_rate_reward_scale * self.step_dt,
             "feet_air_time": air_time * self.cfg.feet_air_time_reward_scale * self.step_dt,
             "flat_orientation_l2": flat_orientation * self.cfg.flat_orientation_reward_scale * self.step_dt,
-            # "feet_dist_error": feet_dist_error * self.cfg.feet_distance_reward_scale *  self.step_dt,
+            "default_pos": def_pos * self.cfg.respect_def_pos_reward_scale * self.step_dt,
+            "feet_var": feet_var * self.cfg.feet_var_reward_scale * self.step_dt,
+            "energy": energy * self.cfg.energy_reward_scale * self.step_dt
         }
         reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
         # Logging
@@ -214,9 +208,6 @@ class Go2Env(DirectRLEnv):
         self._actions[env_ids] = 0.0
         self._previous_actions[env_ids] = 0.0
         
-        # Reset gait phase (randomize initial phase for diversity)
-        self.phase[env_ids] = torch.rand(len(env_ids), device=self.device)
-        
         # Reset robot state
         joint_pos = self._robot.data.default_joint_pos[env_ids]
         joint_vel = self._robot.data.default_joint_vel[env_ids]
@@ -242,3 +233,121 @@ class Go2Env(DirectRLEnv):
         extras["Episode_Termination/base_contact"] = torch.count_nonzero(self.reset_terminated[env_ids]).item()
         extras["Episode_Termination/time_out"] = torch.count_nonzero(self.reset_time_outs[env_ids]).item()
         self.extras["log"].update(extras)
+
+
+
+class Go2LidarEnv(Go2Env):
+    cfg: Go2LidarEnvCfg
+
+    def __init__(self, cfg: Go2LidarEnvCfg, render_mode: str | None = None, **kwargs):
+        super().__init__(cfg, render_mode, **kwargs)
+
+        
+        
+    def _setup_scene(self):
+        super()._setup_scene()
+        self._lidar = RayCaster(self.cfg.lidar_cfg)
+        self.scene.sensors["lidar"] = self._lidar
+        
+        # Initialize curriculum manager for terrain difficulty progression
+        self._curriculum = CurriculumManager(self.cfg.curriculum, self)
+    
+    def _reset_idx(self, env_ids: torch.Tensor | None):
+        # Call parent reset
+        super()._reset_idx(env_ids)
+        
+        # Update curriculum (adjusts terrain difficulty based on performance)
+        self._curriculum.compute(env_ids)
+   
+    def _get_lidar_obs(self):
+        """Generate per-environment heightmaps from lidar data (fully vectorized).
+        
+        Returns:
+            torch.Tensor: Heightmaps with shape [num_envs, x_cells, y_cells]
+        """
+        x_range = (-self.cfg.height_map_dist, self.cfg.height_map_dist)
+        y_range = (-self.cfg.height_map_dist, self.cfg.height_map_dist)
+        
+        # Grid dimensions
+        x_cells = int((x_range[1] - x_range[0]) * self.cfg.res)
+        y_cells = int((y_range[1] - y_range[0]) * self.cfg.res)
+        cells_per_env = x_cells * y_cells
+        
+        # Calculate rays: [num_envs, num_rays, 3]
+        rays = self._lidar.data.pos_w.unsqueeze(1) - self._lidar.data.ray_hits_w
+        
+        # Mark valid rays before replacing inf
+        ray_hit = torch.isfinite(rays).all(dim=-1)
+        # rays[torch.isinf(rays)] = 0
+        
+        # Apply sensor offsets
+        rays[:, :, 0] += self.cfg.lidar_offset[0]
+        rays[:, :, 1] += self.cfg.lidar_offset[1]
+        rays[:, :, 2] += self.cfg.lidar_offset[2]
+        
+        # Convert to grid indices: [num_envs, num_rays]
+        x_idx = ((rays[:, :, 0] - x_range[0]) * self.cfg.res).long()
+        y_idx = ((rays[:, :, 1] - y_range[0]) * self.cfg.res).long()
+        
+        # Validate and flatten
+        valid = (
+            ray_hit &
+            (x_idx >= 0) & (x_idx < x_cells) &
+            (y_idx >= 0) & (y_idx < y_cells)
+        )
+        
+        # Create global indices: env_id * cells_per_env + x_idx * y_cells + y_idx
+        env_ids = torch.arange(self.num_envs, device=rays.device).view(-1, 1).expand_as(x_idx)
+        global_idx = (env_ids * cells_per_env + x_idx * y_cells + y_idx)[valid]
+        z_vals = rays[:, :, 2][valid]
+        
+        # Single scatter operation for all environments
+        height_map = torch.zeros(self.num_envs * cells_per_env, device=rays.device)
+        if len(global_idx) > 0:
+            height_map.scatter_reduce_(0, global_idx, z_vals, reduce='amin', include_self=False)
+        
+        return height_map.view(self.num_envs, x_cells, y_cells)
+        
+    
+    def _get_observations(self) -> dict:
+        self._previous_actions = self._actions.clone()
+
+        self.projected_gravity = quat_apply_inverse(
+            self._robot.data.root_quat_w, torch.tensor([0.0, 0.0, -1.0], device=self.device).repeat(self.num_envs, 1)
+        )
+
+        foot_contacts = (torch.norm(self._contact_sensor.data.net_forces_w[:, self._feet_ids], dim=-1) > 1.0).float()
+        
+        # Get per-environment heightmaps: [num_envs, x_cells, y_cells]
+        height_map = self._get_lidar_obs()
+        
+        # Flatten heightmap for each environment: [num_envs, x_cells * y_cells]
+        print(height_map)
+        height_map_flat = height_map.reshape(self.num_envs, -1)
+        
+        # observations with noise added
+        obs = torch.cat(
+            [
+                tensor
+                for tensor in (
+                    self._robot.data.root_lin_vel_b + (2.0 * torch.rand_like(self._robot.data.root_lin_vel_b) - 1.0) * float(0.1),
+                    self._robot.data.root_ang_vel_b + (2.0 * torch.rand_like(self._robot.data.root_ang_vel_b) - 1.0) * float(0.2),
+                    self.projected_gravity + (2.0 * torch.rand_like(self.projected_gravity) - 1.0) * float(0.05),
+                    self._commands.get_command("base_velocity"),
+                    self._commands.get_command("base_pos"),
+                    self._robot.data.joint_pos - self._robot.data.default_joint_pos + (2.0 * torch.rand_like(self._robot.data.default_joint_pos) - 1.0) * float(0.01),
+                    self._robot.data.joint_vel + (2.0 * torch.rand_like(self._robot.data.default_joint_pos) - 1.0) * float(0.5),
+                    self._actions,
+                    foot_contacts,
+                    height_map_flat + (2.0 * torch.rand_like(height_map_flat) - 1.0) * float(0.01),
+                )
+                if tensor is not None
+            ],
+            dim=-1,
+        )
+        if self.delay == True:
+            obs = self._buffer.compute(obs)
+        observations = {"policy": obs}
+        return observations
+
+    
