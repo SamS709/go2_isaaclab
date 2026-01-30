@@ -127,7 +127,6 @@ class Go2AsymmetricLidarEnv(Go2LidarEnv):
         height_map = self._get_lidar_obs()
         height_map_flat = height_map.reshape(self.num_envs, -1)
         height_map_flat_noisy = height_map_flat + (2.0 * torch.rand_like(height_map_flat) - 1.0) * float(0.01)
-        
         # Add noise
         actor_obs = torch.cat(
             [

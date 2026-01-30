@@ -313,11 +313,13 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
    
 
     # reward scales
-    lin_vel_reward_scale = 1.5 # replace by 1.5 for env without damping and switfness randomization
+    lin_vel_reward_scale = 1.0 # replace by 1.5 for env without damping and switfness randomization
+    lin_vel_dir_scale = 1.0  # Reward for matching velocity direction (squared cosine similarity)
     yaw_rate_reward_scale = 0.75
     base_z_reward_scale = 0.5
-    z_vel_reward_scale = -0.5
+    z_vel_reward_scale = -2.0
     ang_vel_reward_scale = -0.05
+    joint_vel_reward_scale = -0.001
     joint_torque_reward_scale = -0.0002
     joint_accel_reward_scale = -2.5e-7
     action_rate_reward_scale = -0.1
@@ -328,6 +330,9 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
     stand_still_scale = 5.0
     feet_var_reward_scale = -1.0
     energy_reward_scale = -2e-5
+    termination_penalty_scale = -200.0  # Large penalty for falling/base contact
+    undesired_contacts_scale = -1.0  # Penalty for thigh contacts
+    dof_pos_limits_scale = -10.0  # Penalty for joints exceeding soft limits
     
     velocity_threshold = 0.3
     
@@ -342,6 +347,9 @@ class CurriculumCfg:
 @configclass
 class Go2LidarEnvCfg(Go2FlatEnvCfg):
     
+    
+    ROUGH_TERRAINS_CFG.num_cols = 3
+    ROUGH_TERRAINS_CFG.num_rows = 3
     curriculum: CurriculumCfg = CurriculumCfg()
     terrain = TerrainImporterCfg(
         prim_path="/World/ground",
