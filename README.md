@@ -122,7 +122,7 @@ python unitree_mujoco.py
 
 In another terminal (start the policy):
 ```bash
-python go2_controller.py --vel-x -0.5
+python go2_publisher.py --vel-x -0.5
 ```
 
 
