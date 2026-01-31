@@ -55,7 +55,7 @@ class Go2AsymmetricEnv(Go2Env):
         position_commands = self._commands.get_command("base_pos")
         foot_contacts = (torch.norm(self._contact_sensor.data.net_forces_w[:, self._feet_ids], dim=-1) > 1.0).float()
         
-        # Actor observations (NO linear velocity - this is the key limitation!)
+        # Actor observations (NO linear velocity)
         actor_obs = torch.cat(
             [
                 base_ang_vel_noisy,              
@@ -69,7 +69,7 @@ class Go2AsymmetricEnv(Go2Env):
             ],
             dim=-1,
         )
-        # Critic observations (HAS linear velocity - privileged information!)
+        # Critic observations (HAS linear velocity)
         critic_obs = torch.cat(
             [
                 base_lin_vel_noisy,                
@@ -128,8 +128,6 @@ class Go2AsymmetricLidarEnv(Go2LidarEnv):
         height_map = self._get_lidar_obs()
         height_map_flat = height_map.reshape(self.num_envs, -1)
         height_map_flat_noisy = height_map_flat + (2.0 * torch.rand_like(height_map_flat) - 1.0) * float(0.01)
-        
-        # Add noise
         actor_obs = torch.cat(
             [
                 base_ang_vel_noisy,                # 3
@@ -144,8 +142,6 @@ class Go2AsymmetricLidarEnv(Go2LidarEnv):
             ],
             dim=-1,
         )
-        # Critic observations (HAS linear velocity - privileged information!)
-        # Components: base_lin_vel(3) + base_ang_vel(3) + proj_gravity(3) + vel_cmd(3) + pos_cmd(1) + joint_pos(12) + joint_vel(12) + actions(12) + contacts(4) = 53
         critic_obs = torch.cat(
             [
                 base_lin_vel_noisy,                # 3 - PRIVILEGED!
@@ -162,15 +158,12 @@ class Go2AsymmetricLidarEnv(Go2LidarEnv):
             dim=-1,
         )
         
-        # Apply delay buffer if enabled
         if self.delay:
             actor_obs = self._buffer.compute(actor_obs)
-            # Note: typically you'd want a separate buffer for teacher, or no delay for teacher
-            # For simplicity, using same delay here
-        
+
         return {
-            "policy": actor_obs,    # Actor network sees this (50 dims)
-            "critic": critic_obs,   # Critic network sees this (53 dims)
+            "policy": actor_obs,    
+            "critic": critic_obs,   
         }
 
 

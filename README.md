@@ -2,18 +2,23 @@
 
 ## Overview
 
-This project/repository trains a policy for go2 unitree robot and focuses on the Sim2Sim from PhysX to Mujoco using the Newton branch of Isaaclab.
+This project/repository trains a policy for go2 unitree robot and focuses on the Sim2Sim and Sim2Real using different environments.
 
 **Key Features:**
 
 - `Train a policy` for go2 robot using direct based environnement. The policy follows the commands sent by the user: linear (x/y) velocitiezs // angular (z) velocity // base height.
-- `Test` it using keyboard.
-- `Sim2Sim: Newton` from PhysX to Mujoco using Newton branch of Isaaclab repo.
-- `Sim2Sim: unitree_sdk_python` from PhysX to Mujoco using the unitree_mujoco repo. 
+- `Test` it using keyboard in Isaacsim.
+- `Sim2Sim: Newton` from PhysX to Newton using Newton branch of Isaaclab repo.
+- `Sim2Sim: unitree_mujoco` from PhysX to Mujoco using the unitree_mujoco repo. 
+- `Sim2Sim: huro` sim2sim in huro environment (github of a researcher at LORIA).
+- `Sim2Real: unitree_python_sdk2` sim2real in unitree_python_sdk2 using proprietary dds developed by unitree.
+- `Sim2Real: huro` sim2real in huro using ros2.
+
 
 ## Installation
 
-- First, make sure you have the classic Isaaclab environnement installed. If you want to do the Sim2Sim, Newton Isaaclab branch is required.
+
+- Isaaclab sohould be installed
 
 - Clone or copy this project/repository separately from the Isaac Lab installation (i.e. outside the `IsaacLab` directory):
   
@@ -25,6 +30,7 @@ This project/repository trains a policy for go2 unitree robot and focuses on the
 
     ```bash
     # use 'PATH_TO_isaaclab.sh|bat -p' instead of 'python' if Isaac Lab is not installed in Python venv or conda
+    cd go2_isaaclab
     python -m pip install -e source/go2_isaaclab
     ```
 
@@ -36,13 +42,13 @@ Make sure you are in your the classic Isaaclab python environnement (no Newton b
 
     ```bash
     # use 'FULL_PATH_TO_isaaclab.sh|bat -p' instead of 'python' if Isaac Lab is not installed in Python venv or conda
-    python scripts/rsl_rl/train.py --task Isaac-Velocity-Go2-Direct-v0 --num_envs 4096 --headless
+    python scripts/rsl_rl/train.py --task Isaac-Velocity-Go2-Asymmetric-v0 --num_envs 4096 --headless
     ```
 
 - Running trained policy :
 
     ```bash
-    python scripts/rsl_rl/play.py --task Isaac-Velocity-Go2-Direct-v0 --num_envs 8 
+    python scripts/rsl_rl/play.py --task Isaac-Velocity-Go2-Asymmetric-v0 --num_envs 8 
     ```
 - Controlling the robot with the keyboard (here, a pretrained checkpoint is used): 
 
@@ -54,41 +60,34 @@ Controls:
 - **E/R keys**: Increase/decrease the robot's height (z-axis position)
 - **F/G keys**: Increase/decrease the robot's angular velocity (yaw rotation)
 
-    ```bash
-    python scripts/control/go2_locomotion.py --checkpoint pretrained_checkpoint/pretrained_checkpoint.pt
-    ```
+```bash
+python scripts/control/go2_locomotion.py --checkpoint pretrained_checkpoint/pretrained_checkpoint.pt
+```
+
 
 ## Making the Sim2Sim using Newton
 
-Make sure to use the Newton Isaaclab python environnement. Go into the folder where you cloned the Newton branch of Isaaclab.
+Look at the instructions avaible [`here`](https://github.com/SamS709/go2_isaaclab_newton).
 
-You need to move the files from sim2sim/newton of the repo to the Newton Isaaclab dir:
-- physx_to_newton_go2.yaml into /scripts/newton_sim2sim/mappings folder
-- pretrained_checkpoint.pt: create a dir named checkpoints inside scripts/newton_sim2sim/ and move the file into it.
-- go2_isaaclab/ folder into source/isaaclab_tasks/isaaclab_tasks/direct/
 
-Then run it to see the result (using newton visualizer):
+The result after Sim2sim.
 
 <img src="images/Newton_MuJoCo.png" width="400"/>
-
-```bash
-python -m scripts.newton_sim2sim.rsl_rl_transfer \
---task Isaac-Velocity-Go2-Direct-v0 \
---num_envs 10 \
---checkpoint scripts/newton_sim2sim/checkpoints/pretrained_checkpoint.pt \
---policy_transfer_file scripts/newton_sim2sim/mappings/physx_to_newton_go2.yaml \
---newton_visualizer \
---headless
-```
 
   
  ## Making the Sim2Sim using unitree_mujoco
 
-Make sure to use a new python environnement (python=3.10 works fine). Make a new folder in which you clone the <a href="https://github.com/unitreerobotics/unitree_mujoco">unitree_mujoco</a> repo working with <a href = "https://github.com/unitreerobotics/unitree_sdk2_python">unitree_sdk2_python</a> (python simulator). Follow the instructions given in the repo.
+### Dependancies:
 
-Test the installation as described by the repo. launching the test_unitree_sdk2.py should look like this.
+I highly recommand to use a conda env with python=3.10
 
-If it doesnt, and the robot stands in the air, make sure the config.py file (located in /simulate_python/config.py) looks like this (USE_JOISTICK could be set to 1 by default):
+**Install [`unitree_sdk2_python`](https://github.com/unitreerobotics/unitree_sdk2_python.git)** (follow the instructions)
+
+
+**Install [`unitree_mujoco`](https://github.com/unitreerobotics/unitree_mujoco)** (follow the instructions)
+
+In /unitree_mujoco folder, under /simulate_python/, in config.py set USE_JOYSTICK = 0 so that the robot falls on the ground:
+
 
 ```python
 ROBOT = "go2" # Robot name, "go2", "b2", "b2w", "h1", "go2w", "g1" 
@@ -106,44 +105,31 @@ ENABLE_ELASTIC_BAND = False # Virtual spring band, used for lifting h1
 SIMULATE_DT = 0.005  # Need to be larger than the runtime of viewer.sync()
 VIEWER_DT = 0.02  # 50 fps for viewer
 ```
-You need to move the files from sim2sim/unitree_mujoco dir of the repo to the dir where you cloned unitree_mujoco github. Create a /scripts folder inside it copy the /unitree_mujoco folder (the one of this repo) in the created /scripts folder.
-
-
-- Launch the Mujoco simulation (from unitree_mujoco/simulate_python) folder:
-
 ```bash
-python unitree_mujoco.py
+pip install torch PyYAML
 ```
 
-- Start the policy (from the unitree_mujoco/scripts/unitree_mujoco folder):
+### Installation
 
+Copy paste the /go2_mujoco folder which is in /sim2sim folder in at /unitree_mujoco root.
+
+### Sim2sim
+
+In one terminal (launch the simulation):
 ```bash
-python run_policy.py
+python unitree_mujoco.py 
 ```
 
+In another terminal (start the policy):
+```bash
+python go2_controller.py --vel-x -0.5
+```
 
-Then move the 
-- physx_to_mujoco_go2.yaml into /scripts/newton_sim2sim/mappings folder
-- pretrained_checkpoint.pt: create a dir named checkpoints inside scrimpts/newton_sim2sim/ and move the file into it.
-- go2_isaaclab/ folder into source/isaaclab_tasks/isaaclab_tasks/direct/
-
-Then run it to see the result (using newton visualizer):
 
 <img src="images/Unitree_MuJoCo.png" width="400"/>
 
-```bash
-python -m scripts.newton_sim2sim.rsl_rl_transfer \
---task Isaac-Velocity-Go2-Direct-v0 \
---num_envs 10 \
---checkpoint scripts/newton_sim2sim/checkpoints/pretrained_checkpoint.pt \
---policy_transfer_file scripts/newton_sim2sim/mappings/physx_to_mujoco_go2.yaml \
---newton_visualizer \
---headless
-```
+
  ## Making the Sim2Real using huro github
-
-
-In developpement...
 
 Clone the sami branch:
 
@@ -151,10 +137,13 @@ Clone the sami branch:
 git clone --single-branch --branch sami https://github.com/itsikelis/huro.git
 ```
 
-Follow the instructions provided in the readme to see how to deploy it on th real robot.
-
-The changes brought to the previous file (unitree_mujoco simulation) were:
+Follow the instructions provided in the readme of the [`github`](https://github.com/hucebot/huro/tree/sami) to see how to deploy it in sim or on the real robot.
 
 
-- the mapping of the joints (Right <-> Left)
-- the type of messages 
+ ## Making the Sim2Real using unitree_sdk2_python
+
+Follow the instructions provided <a href = "https://github.com/SamS709/go2_unitree.git">here</a>
+
+
+
+

@@ -22,15 +22,11 @@ from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.sensors import ContactSensorCfg, RayCasterCfg, patterns
 from isaaclab.managers import CurriculumTermCfg as CurrTerm
 
-# Uncomment the two lines below for MuJoCo env in Newton Isaaclab's branch
-# from isaaclab.sim._impl.newton_manager_cfg import NewtonCfg
-# from isaaclab.sim._impl.solvers_cfg import MJWarpSolverCfg
 from isaaclab.sim import SimulationCfg
 from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
 from isaaclab.terrains.config.rough import ROUGH_TERRAINS_CFG  # isort: skip
 from isaaclab.utils.assets import ISAACLAB_NUCLEUS_DIR
-from isaaclab.utils.math import quat_from_euler_xyz
 
 
 # Import custom commands
@@ -104,9 +100,7 @@ class CommandsCfg:
 class EventCfg:
     """Configuration for randomization."""
     
-# Comment reset_robot_joints if you are in Newton Isaaclab's branch)
-# ------------------------------------------------------------------------------------------------
-# ------------------------------------------------------------------------------------------------
+
     reset_robot_joints = EventTerm(
         func=mdp.reset_joints_by_offset,
         mode="reset",
@@ -116,9 +110,7 @@ class EventCfg:
             "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
         },
     )
-# ------------------------------------------------------------------------------------------------
-# ------------------------------------------------------------------------------------------------
-    
+
     reset_robot_base = EventTerm(
         func=mdp.reset_root_state_uniform,
         mode="reset", 
@@ -216,8 +208,6 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
     observation_space = 53
     state_space = 0
 
-    # classic imulation (comment if you are in Newton Isaaclab's branch)
-    
     sim: SimulationCfg = SimulationCfg(
         dt=1 / 200,
         render_interval=decimation,
@@ -232,36 +222,7 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
             restitution=0.0,
         ),
     )
-# ------------------------------------------------------------------------------------------------
-# ------------------------------------------------------------------------------------------------
-    
-# MuJoCo simulation (uncomment if you are in Newton Isaaclab's branch)
-# ------------------------------------------------------------------------------------------------
-# ------------------------------------------------------------------------------------------------
-    # solver_cfg = MJWarpSolverCfg(
-    #     njmax=150,
-    #     ncon_per_env=35,
-    #     ls_iterations=10,
-    #     cone="pyramidal",
-    #     ls_parallel=True,
-    #     impratio=1,
-    #     integrator="implicit",
-    # )
-    
-    # newton_cfg = NewtonCfg(
-    #     solver_cfg=solver_cfg,
-    #     num_substeps=1,
-    #     debug_mode=False,
-    # )
-
-    # sim: SimulationCfg = SimulationCfg(
-    #     dt=1 / 200,
-    #     render_interval=decimation,
-    #     newton_cfg=newton_cfg,
-    # )
-# ------------------------------------------------------------------------------------------------
-# ------------------------------------------------------------------------------------------------
-    
+  
     # This terrain adds a little bit of noise so that the robot can walk on carpet or objects on the ground
     terrain = TerrainImporterCfg(
         prim_path="/World/ground",
@@ -294,17 +255,91 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
    
 
     # reward scales
-    lin_vel_reward_scale = 2.0 # replace by 1.5 for env without damping and switfness randomization
+    lin_vel_reward_scale = 1.0 # replace by 1.5 for env without damping and switfness randomization
+    lin_vel_dir_scale = 1.0  # Reward for matching velocity direction (squared cosine similarity)
     yaw_rate_reward_scale = 0.75
-    base_z_reward_scale = 0.7
+    base_z_reward_scale = 0.5
     z_vel_reward_scale = -2.0
     ang_vel_reward_scale = -0.05
+    joint_vel_reward_scale = -0.001
     joint_torque_reward_scale = -0.0002
     joint_accel_reward_scale = -2.5e-7
     action_rate_reward_scale = -0.1
     feet_air_time_reward_scale = 0.1
     flat_orientation_reward_scale = -2.5
     feet_distance_reward_scale = 0.0
+    respect_def_pos_reward_scale = -0.07
+    stand_still_scale = 5.0
+    feet_var_reward_scale = -1.0
+    energy_reward_scale = -2e-5
+    termination_penalty_scale = -200.0  # Large penalty for falling/base contact
+    undesired_contacts_scale = -1.0  # Penalty for thigh contacts
+    dof_pos_limits_scale = -10.0  # Penalty for joints exceeding soft limits
+    
+    velocity_threshold = 0.3
+    
 
+@configclass
+class CurriculumCfg:
+    """Curriculum terms for the MDP."""
+
+    terrain_levels = CurrTerm(func=terrain_levels_vel)
+
+
+@configclass
+class Go2LidarEnvCfg(Go2FlatEnvCfg):
+    
+    
+    ROUGH_TERRAINS_CFG.num_cols = 3
+    ROUGH_TERRAINS_CFG.num_rows = 3
+    curriculum: CurriculumCfg = CurriculumCfg()
+    terrain = TerrainImporterCfg(
+        prim_path="/World/ground",
+        terrain_type="generator",
+        terrain_generator=ROUGH_TERRAINS_CFG,
+        max_init_terrain_level=5,
+        collision_group=-1,
+        physics_material=sim_utils.RigidBodyMaterialCfg(
+            friction_combine_mode="multiply",
+            restitution_combine_mode="multiply",
+            static_friction=1.0,
+            dynamic_friction=1.0,
+        ),
+        visual_material=sim_utils.MdlFileCfg(
+            mdl_path=f"{ISAACLAB_NUCLEUS_DIR}/Materials/TilesMarbleSpiderWhiteBrickBondHoned/TilesMarbleSpiderWhiteBrickBondHoned.mdl",
+            project_uvw=True,
+            texture_scale=(0.25, 0.25),
+        ),
+        debug_vis=False,
+    )
+    
+    # Heightmap configuration
+    height_map_dist = 1
+    res = 6  # resolution of the heightmap (cells per meter)
+    height_map_cells = int(2 * height_map_dist * res) ** 2  
+    observation_space = 53 + height_map_cells  
+    
+    lidar_range = height_map_dist * 3.0 # * 1.4142135623730951  # sqrt(2)
+    lidar_offset = (0.28945, 0.0, -0.04682)
+    # Pre-computed quaternion (w, x, y, z) from euler angles (-pi, pi - 2.8782, -pi)
+    lidar_rotation = (1.3132e-01, 3.7593e-08, 9.9134e-01, 3.7593e-08)
+    
+    lidar_cfg = RayCasterCfg(
+        prim_path="/World/envs/env_.*/Robot/base",
+        update_period=1 / 60,
+        offset=RayCasterCfg.OffsetCfg(
+            pos=lidar_offset,
+            rot=lidar_rotation,
+        ),
+        mesh_prim_paths=["/World/ground"],
+        ray_alignment="base",
+        pattern_cfg=patterns.LidarPatternCfg(
+            channels=32, vertical_fov_range=[-90.0, 90.0], horizontal_fov_range=[-180, 180], horizontal_res=2.0
+        ),
+        max_distance=lidar_range,
+        debug_vis=False,
+    )
+    
+    
 
 
