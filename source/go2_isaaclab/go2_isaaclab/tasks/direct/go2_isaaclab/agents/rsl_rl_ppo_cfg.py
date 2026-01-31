@@ -11,7 +11,7 @@ from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlPpoActorCriticRecurr
 @configclass
 class Go2FlatPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = 24
-    max_iterations = 6000
+    max_iterations = 50000
     save_interval = 50
     experiment_name = "go2_flat_direct"
     policy = RslRlPpoActorCriticCfg(
@@ -22,17 +22,7 @@ class Go2FlatPPORunnerCfg(RslRlOnPolicyRunnerCfg):
         critic_hidden_dims=[256, 128],
         activation="elu",
     )
-    # policy = RslRlPpoActorCriticRecurrentCfg(
-    #     init_noise_std=1.0,
-    #     actor_obs_normalization=False,
-    #     critic_obs_normalization=False,
-    #     actor_hidden_dims=[128, 128],
-    #     critic_hidden_dims=[256, 128],
-    #     activation="elu",
-    #     rnn_type="lstm",
-    #     rnn_hidden_dim=64,
-    #     rnn_num_layers=2
-    # )
+
     algorithm = RslRlPpoAlgorithmCfg(
         value_loss_coef=1.0,
         use_clipped_value_loss=True,

@@ -22,15 +22,11 @@ from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.sensors import ContactSensorCfg, RayCasterCfg, patterns
 from isaaclab.managers import CurriculumTermCfg as CurrTerm
 
-# Uncomment the two lines below for MuJoCo env in Newton Isaaclab's branch
-# from isaaclab.sim._impl.newton_manager_cfg import NewtonCfg
-# from isaaclab.sim._impl.solvers_cfg import MJWarpSolverCfg
 from isaaclab.sim import SimulationCfg
 from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
 from isaaclab.terrains.config.rough import ROUGH_TERRAINS_CFG  # isort: skip
 from isaaclab.utils.assets import ISAACLAB_NUCLEUS_DIR
-from isaaclab.utils.math import quat_from_euler_xyz
 
 
 # Import custom commands
@@ -104,9 +100,7 @@ class CommandsCfg:
 class EventCfg:
     """Configuration for randomization."""
     
-# Comment reset_robot_joints if you are in Newton Isaaclab's branch)
-# ------------------------------------------------------------------------------------------------
-# ------------------------------------------------------------------------------------------------
+
     reset_robot_joints = EventTerm(
         func=mdp.reset_joints_by_offset,
         mode="reset",
@@ -116,9 +110,7 @@ class EventCfg:
             "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
         },
     )
-# ------------------------------------------------------------------------------------------------
-# ------------------------------------------------------------------------------------------------
-    
+
     reset_robot_base = EventTerm(
         func=mdp.reset_root_state_uniform,
         mode="reset", 
@@ -216,9 +208,6 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
     observation_space = 53
     state_space = 0
 
-# classic imulation (comment if you are in Newton Isaaclab's branch)
-# ------------------------------------------------------------------------------------------------
-# ------------------------------------------------------------------------------------------------
     sim: SimulationCfg = SimulationCfg(
         dt=1 / 200,
         render_interval=decimation,
@@ -233,36 +222,7 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
             restitution=0.0,
         ),
     )
-# ------------------------------------------------------------------------------------------------
-# ------------------------------------------------------------------------------------------------
-    
-# MuJoCo simulation (uncomment if you are in Newton Isaaclab's branch)
-# ------------------------------------------------------------------------------------------------
-# ------------------------------------------------------------------------------------------------
-    # solver_cfg = MJWarpSolverCfg(
-    #     njmax=150,
-    #     ncon_per_env=35,
-    #     ls_iterations=10,
-    #     cone="pyramidal",
-    #     ls_parallel=True,
-    #     impratio=1,
-    #     integrator="implicit",
-    # )
-    
-    # newton_cfg = NewtonCfg(
-    #     solver_cfg=solver_cfg,
-    #     num_substeps=1,
-    #     debug_mode=False,
-    # )
-
-    # sim: SimulationCfg = SimulationCfg(
-    #     dt=1 / 200,
-    #     render_interval=decimation,
-    #     newton_cfg=newton_cfg,
-    # )
-# ------------------------------------------------------------------------------------------------
-# ------------------------------------------------------------------------------------------------
-    
+  
     # This terrain adds a little bit of noise so that the robot can walk on carpet or objects on the ground
     terrain = TerrainImporterCfg(
         prim_path="/World/ground",
