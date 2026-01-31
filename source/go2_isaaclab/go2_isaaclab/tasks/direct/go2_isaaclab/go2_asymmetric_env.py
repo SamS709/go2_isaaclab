@@ -123,6 +123,7 @@ class Go2AsymmetricLidarEnv(Go2LidarEnv):
         
         # Get foot contact states (binary: 1 if in contact, 0 otherwise)
         foot_contacts = (torch.norm(self._contact_sensor.data.net_forces_w[:, self._feet_ids], dim=-1) > 1.0).float()
+        # print("Feet names:", [self._robot.body_names[i] for i in self._feet_ids])        
         
         height_map = self._get_lidar_obs()
         height_map_flat = height_map.reshape(self.num_envs, -1)
