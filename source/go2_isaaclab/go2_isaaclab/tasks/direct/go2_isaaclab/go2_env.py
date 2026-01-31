@@ -58,9 +58,7 @@ class Go2Env(DirectRLEnv):
         self._base_id, _ = self._contact_sensor.find_bodies("base")
         self._feet_ids, _ = self._contact_sensor.find_bodies(".*foot")
         self._thigh_ids, _ = self._contact_sensor.find_bodies(".*thigh")
-        
-        print(_)
-        
+                
     def _setup_scene(self):
         self._robot = Articulation(self.cfg.robot)
         self.scene.articulations["robot"] = self._robot

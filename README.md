@@ -140,7 +140,7 @@ git clone --single-branch --branch sami https://github.com/itsikelis/huro.git
 Follow the instructions provided in the readme of the [`github`](https://github.com/hucebot/huro/tree/sami) to see how to deploy it in sim or on the real robot.
 
 
- ## Making the Sim2Real using unitree_sdk2_python
+ ## Making the Sim2Sim and Sim2Real using unitree_sdk2_python
 
 Follow the instructions provided <a href = "https://github.com/SamS709/go2_unitree.git">here</a>
 
