@@ -59,9 +59,10 @@ Controls:
 - **Left/Right arrows**: Increase/decrease the robot's left/right velocity (y-axis) 
 - **E/R keys**: Increase/decrease the robot's height (z-axis position)
 - **F/G keys**: Increase/decrease the robot's angular velocity (yaw rotation)
+- *visualize* arg to see the commands sent
 
 ```bash
-python scripts/control/go2_locomotion.py --checkpoint pretrained_checkpoint/pretrained_checkpoint.pt
+    python scripts/control/go2_locomotion.py --checkpoint pretrained_checkpoint/pretrained_checkpoint.pt --visualize
 ```
 
 
