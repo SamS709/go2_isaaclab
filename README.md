@@ -123,14 +123,14 @@ python unitree_mujoco.py
 
 In another terminal (start the policy):
 
-**PhysX -> unitree_mujoco**
+**Newton -> unitree_mujoco**
 
 To test a policy trained with newton:
 ```bash
 python go2_publisher.py --vel-x=-0.5 --policy=policy_newton.pt --mapping=newton
 ```
 
-**Newton -> unitree_mujoco**
+**PhysX -> unitree_mujoco**
 
 To test a poliy trained with classic isaaclab env:
 ```bash
