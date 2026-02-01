@@ -9,24 +9,11 @@ Loads a PyTorch policy and controls the robot at 50Hz
 TO RUN:
 First run the simulation, then:
 
-python run_policy.py \
-    --vel-x -0.5 \
-    --vel-y 0.1 \
-    --vel-yaw 0.3 \
-    --kd 0.5 \
-    --kp 25.0
+python go2_publisher.py --vel-x=-0.5 --policy=policy.pt --mapping=physx
+python go2_publisher.py --vel-x=-0.5 --policy=policy_newton.pt --mapping=newton
 
 Or with all parameters:
 
-python run_policy.py \
-    --policy policy.pt \
-    --vel-x 0.3 \
-    --vel-y 0.0 \
-    --vel-yaw 0.0 \
-    --action-scale 0.5 \
-    --kp 25.0 \
-    --kd 0.5 \
-    --control-freq 200
 """
 import time
 import numpy as np
@@ -53,16 +40,14 @@ class Go2PolicyController:
         vel_x=0.0,
         vel_y=0.0,
         vel_yaw=0.0,
-        height=0.3
+        height=0.3,
+        mapping="physx"
     ):
         """
         Initialize the policy controller.
 
         Args:
             policy_path: Path to the policy.pt file
-            kp: Position gain/stiffness (default: 25.0)
-            kd: Velocity gain/damping (default: 0.5)
-            action_scale: Scale factor for policy actions (default: 0.5)
             vel_x: Forward velocity command (m/s)
             vel_y: Lateral velocity command (m/s)
             vel_yaw: Yaw rate command (rad/s)
@@ -87,7 +72,13 @@ class Go2PolicyController:
 
         # Initialize the mapper for joint remapping
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        mapping_path = os.path.join(script_dir, "physx_to_mujoco_go2.yaml")
+        if mapping == "physx":
+            mapping_path = os.path.join(script_dir, "physx_to_mujoco_go2.yaml")
+        elif mapping == "newton":
+            mapping_path = os.path.join(script_dir, "newton_to_mujoco_go2.yaml")
+        else:
+            print("[ERROR] The specified mapping doesnt exist.")
+            return
         
         default_pos_sdk = np.array([
             -0.1, 0.8, -1.5,  # FR: hip, thigh, calf (actuators 0-2)
@@ -250,6 +241,10 @@ def main():
     parser.add_argument(
         "--height", type=float, default=0.3, help="Height command (m)"
     )
+    
+    parser.add_argument(
+        "--mapping", type=str, default="physx", help="Possible values:\n  -'physx'\n  -'newton'"
+    )
 
     args = parser.parse_args()
 
@@ -266,6 +261,7 @@ def main():
         vel_y=args.vel_y,
         vel_yaw=args.vel_yaw,
         height=args.height,
+        mapping=args.mapping
     )
 
     # Run controller
