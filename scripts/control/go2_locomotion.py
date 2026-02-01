@@ -9,7 +9,7 @@ This script demonstrates an interactive demo with the H1 rough terrain environme
 .. code-block:: bash
 
     # Usage
-    python scripts/control/go2_locomotion.py --checkpoint pretrained_checkpoint/model_24600.pt
+    python scripts/control/go2_locomotion.py --checkpoint pretrained_checkpoint/pretrained_checkpoint.pt --visualize
 """
 
 
@@ -27,7 +27,12 @@ from isaaclab.app import AppLauncher
 parser = argparse.ArgumentParser(
     description="This script demonstrates an interactive demo with the Go2 robot environment."
 )
-
+parser.add_argument(
+    "--visualize",
+    action="store_true",
+    default=False,
+    help="Enable visualization of commands (velocity, position, etc.). Default: False"
+)
 # append RSL-RL cli arguments
 cli_args.add_rsl_rl_args(parser)
 # append AppLauncher cli args
@@ -105,7 +110,9 @@ class Go2FlatDemo:
         env_cfg.episode_length_s = 1000000
         env_cfg.commands.base_velocity.ranges.lin_vel_x = (0.0, 1.0)
         env_cfg.commands.base_pos.ranges.z_pos = (0.3, 0.3)  # Fixed height at 0.3m
-        
+        env_cfg.visualize = args_cli.visualize
+        # Re-run post_init to update debug_vis based on visualize flag
+        env_cfg.__post_init__()
         # Create environment using gym.make (proper way to initialize)
         env = gym.make(TASK, cfg=env_cfg, render_mode=None)
         # wrap around environment for rsl-rl
@@ -169,7 +176,6 @@ class Go2FlatDemo:
         """Checks for a keyboard event and assign the corresponding command control depending on key pressed."""
         if event.type == carb.input.KeyboardEventType.KEY_PRESS:
             # Arrow keys map to pre-defined command vectors to control navigation of robot
-            print(event.input.name)
             if event.input.name == "UP":
                 if self.commands[self._selected_id, 0] <= MAX_VEL:
                     self.commands[self._selected_id,:3] += torch.tensor([0.1,0.0,0.0],device = self.device)
@@ -268,7 +274,6 @@ def main():
             demo_go2.env.unwrapped._commands._terms["base_pos"].command[:] = demo_go2.commands[:, 3:4]
             
             # Run policy
-            print(obs["policy"].shape)
             action = demo_go2.policy(obs)
             obs, _, _, _ = demo_go2.env.step(action)
             

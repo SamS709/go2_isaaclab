@@ -207,6 +207,7 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
     action_space = 12
     observation_space = 53
     state_space = 0
+    visualize = False
 
     sim: SimulationCfg = SimulationCfg(
         dt=1 / 200,
@@ -274,7 +275,7 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
 
     # reward scales
     lin_vel_reward_scale = 1.0 # replace by 1.5 for env without damping and switfness randomization
-    lin_vel_dir_scale = 1.0  # Reward for matching velocity direction (squared cosine similarity)
+    lin_vel_dir_scale = 0.5  # Reward for matching velocity direction
     yaw_rate_reward_scale = 0.75
     base_z_reward_scale = 0.5
     z_vel_reward_scale = -2.0
@@ -296,6 +297,13 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
     
     velocity_threshold = 0.3
     
+    
+    def __post_init__(self):
+        """Post initialization to set debug_vis based on visualize flag."""
+        # Update debug_vis for commands based on visualize attribute
+        self.commands.base_velocity.debug_vis = self.visualize
+        self.commands.base_pos.debug_vis = self.visualize
+
 
 @configclass
 class CurriculumCfg:

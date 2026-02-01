@@ -59,12 +59,12 @@ class Go2Env(DirectRLEnv):
         self._feet_ids, _ = self._contact_sensor.find_bodies(".*foot")
         self._thigh_ids, _ = self._contact_sensor.find_bodies(".*thigh")
         
-        print(_)
         
     def _setup_scene(self):
         self._robot = Articulation(self.cfg.robot)
         self.scene.articulations["robot"] = self._robot
         self._commands = CommandManager(self.cfg.commands, self)
+        
         self._lidar = None
         self.history_length = 2
         self.delay = True
@@ -251,7 +251,6 @@ class Go2Env(DirectRLEnv):
         # termination penalty (applied when base contacts ground)
         net_contact_forces = self._contact_sensor.data.net_forces_w_history
         base_contact = torch.any(torch.max(torch.norm(net_contact_forces[:, :, self._base_id], dim=-1), dim=1)[0] > 1.0, dim=1).float()
-        
         # undesired contacts (penalize thigh contacts)
         thigh_contact = torch.max(torch.norm(net_contact_forces[:, :, self._thigh_ids], dim=-1), dim=1)[0] > 1.0
         undesired_contacts = torch.sum(thigh_contact, dim=1)
@@ -286,9 +285,6 @@ class Go2Env(DirectRLEnv):
             "dof_pos_limits": dof_pos_limits * self.cfg.dof_pos_limits_scale * self.step_dt
         }
         reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
-        print(height_map)
-        print(terrain_roughness)
-        print(roughness_scale)
         # Logging
         for key, value in rewards.items():
             self._episode_sums[key] += value
@@ -382,7 +378,6 @@ class Go2LidarEnv(Go2Env):
         height_map = self._get_lidar_obs()
         
         # Flatten heightmap for each environment: [num_envs, x_cells * y_cells]
-        print(height_map)
         height_map_flat = height_map.reshape(self.num_envs, -1)
         
         
