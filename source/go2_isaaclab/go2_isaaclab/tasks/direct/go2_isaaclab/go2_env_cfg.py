@@ -162,7 +162,7 @@ class EventCfg:
     
     reset_robot_joints = EventTerm(
         func=mdp.reset_joints_by_scale,
-        mode="reset",
+        mode="startup",
         params={
             "position_range": (0.8, 1.2),
             "velocity_range": (-1.0, 1.0),
@@ -227,7 +227,25 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
     # This terrain adds a little bit of noise so that the robot can walk on carpet or objects on the ground
     terrain = TerrainImporterCfg(
         prim_path="/World/ground",
-        terrain_type="plane",
+        terrain_type="generator",
+        terrain_generator=terrain_gen.TerrainGeneratorCfg(
+            size=(8.0, 8.0),
+            border_width=20.0,
+            num_rows=10,
+            num_cols=20,
+            horizontal_scale=0.1,
+            vertical_scale=0.005,
+            slope_threshold=0.75,
+            difficulty_range=(0.0, 1.0),
+            use_cache=False,
+            sub_terrains={
+                "flat": terrain_gen.MeshPlaneTerrainCfg(proportion=0.6),
+                "random_rough": terrain_gen.HfRandomUniformTerrainCfg(
+                    proportion=0.4, noise_range=(0.00, 0.005), noise_step=0.008, border_width=0.25
+                ),
+            },
+        ),
+        max_init_terrain_level=2,
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
             friction_combine_mode="multiply",
