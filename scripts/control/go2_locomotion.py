@@ -17,9 +17,10 @@ import argparse
 import os
 import sys
 
-sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../.."))
-import scripts.rsl_rl.cli_args as cli_args  # isort: skip
-
+sys.path.append(
+    os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "rsl_rl"))
+)
+import cli_args  # isort: skip
 
 from isaaclab.app import AppLauncher
 
