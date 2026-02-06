@@ -37,6 +37,8 @@ from .commands.z_axis_command_cfg import ZAxisCommandCfg
 ##
 from isaaclab_assets.robots.unitree import UNITREE_GO2_CFG  # isort: skip
 
+DEBUG_VIS = True
+
 def terrain_levels_vel(
     env: ManagerBasedRLEnv, env_ids: Sequence[int], asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
@@ -80,7 +82,7 @@ class CommandsCfg:
         rel_heading_envs=1.0,
         heading_command=False,
         heading_control_stiffness=0.5,
-        debug_vis=False,
+        debug_vis=DEBUG_VIS,
         ranges=mdp.UniformVelocityCommandCfg.Ranges(
             lin_vel_x=(-1.0, 1.0), lin_vel_y=(-1.0, 1.0), ang_vel_z=(-1.0, 1.0), heading=None
         ),
@@ -89,7 +91,7 @@ class CommandsCfg:
     base_pos = ZAxisCommandCfg(
         asset_name="robot",
         resampling_time_range=(4.0, 6.0),
-        debug_vis=False,
+        debug_vis=DEBUG_VIS,
         ranges=ZAxisCommandCfg.Ranges(
             z_pos=(0.2, 0.4),
         ),
@@ -254,7 +256,7 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
             dynamic_friction=1.0,
             restitution=0.0,
         ),
-        debug_vis=False,
+        debug_vis=DEBUG_VIS,
     )
 
     # scene
@@ -316,8 +318,8 @@ class CurriculumCfg:
 class Go2LidarEnvCfg(Go2FlatEnvCfg):
     
     
-    ROUGH_TERRAINS_CFG.num_cols = 3
-    ROUGH_TERRAINS_CFG.num_rows = 3
+    ROUGH_TERRAINS_CFG.num_cols = 1
+    ROUGH_TERRAINS_CFG.num_rows = 1
     curriculum: CurriculumCfg = CurriculumCfg()
     terrain = TerrainImporterCfg(
         prim_path="/World/ground",
@@ -336,11 +338,11 @@ class Go2LidarEnvCfg(Go2FlatEnvCfg):
             project_uvw=True,
             texture_scale=(0.25, 0.25),
         ),
-        debug_vis=False,
+        debug_vis=DEBUG_VIS,
     )
     
     # Heightmap configuration
-    height_map_dist = 1
+    height_map_dist = 1.0
     res = 6  # resolution of the heightmap (cells per meter)
     height_map_cells = int(2 * height_map_dist * res) ** 2  
     observation_space = 53 + height_map_cells  
@@ -360,10 +362,10 @@ class Go2LidarEnvCfg(Go2FlatEnvCfg):
         mesh_prim_paths=["/World/ground"],
         ray_alignment="base",
         pattern_cfg=patterns.LidarPatternCfg(
-            channels=32, vertical_fov_range=[-90.0, 90.0], horizontal_fov_range=[-180, 180], horizontal_res=2.0
+            channels=128, vertical_fov_range=[-90.0, 90.0], horizontal_fov_range=[-180, 180], horizontal_res=2.0
         ),
         max_distance=lidar_range,
-        debug_vis=False,
+        debug_vis=DEBUG_VIS,
     )
     
     

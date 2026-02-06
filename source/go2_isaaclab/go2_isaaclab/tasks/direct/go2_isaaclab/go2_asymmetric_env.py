@@ -16,7 +16,7 @@ import torch
 from .go2_env import Go2LidarEnv, Go2Env, quat_apply_inverse
 from .go2_asymmetric_env_cfg import Go2AsymmetricEnvCfg, Go2AsymmetricLidarEnvCfg
 
-torch.set_printoptions(precision=2, linewidth=200, sci_mode=False)
+torch.set_printoptions(precision=2, linewidth=1000, sci_mode=False)
 
 class Go2AsymmetricEnv(Go2Env):
     """
@@ -126,8 +126,11 @@ class Go2AsymmetricLidarEnv(Go2LidarEnv):
         # print("Feet names:", [self._robot.body_names[i] for i in self._feet_ids])        
         
         height_map = self._get_lidar_obs()
+        height_map_noisy = height_map + (2.0 * torch.rand_like(height_map) - 1.0) * float(0.1)
+        # print(height_map_noisy)
         height_map_flat = height_map.reshape(self.num_envs, -1)
-        height_map_flat_noisy = height_map_flat + (2.0 * torch.rand_like(height_map_flat) - 1.0) * float(0.01)
+        height_map_flat_noisy = height_map_flat + (2.0 * torch.rand_like(height_map_flat) - 1.0) * float(0.1)
+        # print(height_map_flat_noisy)
         actor_obs = torch.cat(
             [
                 base_ang_vel_noisy,                # 3

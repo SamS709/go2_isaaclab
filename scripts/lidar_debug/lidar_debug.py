@@ -3,6 +3,21 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
+# JOINT ORDER:
+#   - "FL_hip_joint"
+#   - "FR_hip_joint"
+#   - "RL_hip_joint"
+#   - "RR_hip_joint"
+#   - "FL_thigh_joint"
+#   - "FR_thigh_joint"
+#   - "RL_thigh_joint"
+#   - "RR_thigh_joint"
+#   - "FL_calf_joint"
+#   - "FR_calf_joint"
+#   - "RL_calf_joint"
+#   - "RR_calf_joint"
+
+
 import argparse
 import numpy as np
 
@@ -136,9 +151,9 @@ class RaycasterSensorSceneCfg(InteractiveSceneCfg):
         mesh_prim_paths=["/World"],
         ray_alignment="base",
         pattern_cfg=patterns.LidarPatternCfg(
-            channels=64, vertical_fov_range=[-90.0, 90.0], horizontal_fov_range=[-180, 180], horizontal_res=1.0
+            channels=128, vertical_fov_range=[-90.0, 90.0], horizontal_fov_range=[-180, 180], horizontal_res=1.0
         ),
-        max_distance= MAX_RAY_DIST * 2.0 ** (1.0 / 2.0) ,
+        max_distance= MAX_RAY_DIST * 2.0 ,
         debug_vis=not args_cli.headless,
     )
 
@@ -165,8 +180,10 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
             # if this is not done, then the robots will be spawned at the (0, 0, 0) of the simulation world
             root_state = scene["robot"].data.default_root_state.clone()
             root_state[:, :3] += scene.env_origins
-            # Offset robot 5 meters to the right (positive y-direction)
-            root_state[:, 1] -= 4.25
+            
+            root_state[:, 1] -= 4.2
+            # root_state[:, 1] -= 10.25
+            
             root_state[:, 0] += 0.7
             scene["robot"].write_root_pose_to_sim(root_state[:, :7])
             scene["robot"].write_root_velocity_to_sim(root_state[:, 7:])
@@ -175,27 +192,43 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
                 scene["robot"].data.default_joint_pos.clone(),
                 scene["robot"].data.default_joint_vel.clone(),
             )
-            joint_pos += torch.rand_like(joint_pos) * 0.1
+            target_add = torch.zeros_like(joint_pos)
+            target_add[:,4] += 1.0
+            target_add[:,5] += 1.0
+            target_add[:,8] -= 1.0
+            target_add[:,9] -= 1.0
+            joint_pos += torch.rand_like(joint_pos) * 0.1 + target_add
             scene["robot"].write_joint_state_to_sim(joint_pos, joint_vel)
             # clear internal buffers
             scene.reset()
             print("[INFO]: Resetting robot state...")
         # Apply default actions to the robot
         # -- generate actions/commands
+        #   - "FL_hip_joint"
+        #   - "FR_hip_joint"
+        #   - "RL_hip_joint"
+        #   - "RR_hip_joint"
+        #   - "FL_thigh_joint"
+        #   - "FR_thigh_joint"
+        #   - "RL_thigh_joint"
+        #   - "RR_thigh_joint"
+        #   - "FL_calf_joint"
+        #   - "FR_calf_joint"
+        #   - "RL_calf_joint"
+        #   - "RR_calf_joint"
+
+        targets = scene["robot"].data.default_joint_pos.clone()
+        # targets[:,4] += 1.0 * torch.sin(torch.tensor(3 * sim_time))
+        # targets[:,5] += 1.0 * torch.sin(torch.tensor(3 * sim_time))
+        # targets[:,8] -= 1.0 * torch.sin(torch.tensor(3 * sim_time))
+        # targets[:,9] -= 1.0 * torch.sin(torch.tensor(3 * sim_time))
         
-        targets = scene["robot"].data.default_joint_pos 
-        targets += torch.rand_like(joint_pos) * 0.1
         # print("pos: ", scene["robot"].data.default_joint_pos.clone())        
-        # -- apply action to the robot
         scene["robot"].set_joint_position_target(targets)
-        # -- write data to sim
         scene.write_data_to_sim()
-        # perform step
         sim.step()
-        # update sim-time
         sim_time += sim_dt
         count += 1
-        # update buffers
         scene.update(sim_dt)
 
         # print information from the sensors
@@ -204,10 +237,15 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
         # print(scene["ray_caster"])
         rays = scene["ray_caster"].data.pos_w.unsqueeze(1) - scene["ray_caster"].data.ray_hits_w         
         rays[torch.isinf(rays)] = 0
-        # Remove sensor offset from all axes
-        rays[:, :, 0] += OFFSET[0]  # x offset
-        rays[:, :, 1] += OFFSET[1] # y offset (no change)
-        rays[:, :, 2] += OFFSET[2] # z offset
+        
+        # Transform rays from world frame to robot frame with offset correction
+        from isaaclab.utils.math import quat_apply, quat_conjugate
+        # First add offset in world frame (base to lidar transform)
+        offset_robot_frame = torch.tensor(OFFSET, device=rays.device).unsqueeze(0).repeat(rays.shape[0], 1)  # [num_envs, 3]
+        offset_world_frame = quat_apply(scene["robot"].data.root_quat_w, offset_robot_frame)  # [num_envs, 3]
+        rays += offset_world_frame.unsqueeze(1)
+        # Then rotate from world to robot frame
+        rays = quat_apply(quat_conjugate(scene["robot"].data.root_quat_w), rays) 
         print("Ray cast hit results: ", rays.shape)
         print((rays[:,:,0]))
         finite_x = rays[:,:,0][torch.isfinite(rays[:,:,0])]
@@ -218,39 +256,10 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
         print("max y: ", torch.max(finite_y) if finite_y.numel() > 0 else "No finite values")
         print("min y: ", torch.min(finite_y) if finite_y.numel() > 0 else "No finite values")
         
-        # Create height map using loop
-        # res = 6  # resolution (cells per meter)
-        # x_cells = 2 * int(MAX_RAY_DIST) * res
-        # y_cells = 2 * int(MAX_RAY_DIST) * res
-        # height_map = torch.full((x_cells, y_cells), float('-inf'), device=rays.device)
-        
-        # for i in range(x_cells):
-        #     for j in range(y_cells):
-        #         # Define grid cell boundaries
-        #         x_min = -MAX_RAY_DIST + i / res
-        #         x_max = -MAX_RAY_DIST + (i + 1) / res
-        #         y_min = -MAX_RAY_DIST + j / res
-        #         y_max = -MAX_RAY_DIST + (j + 1) / res
-                
-        #         # Filter rays in this cell
-        #         mask = (rays[:, :, 0] >= x_min) & (rays[:, :, 0] < x_max) & \
-        #                (rays[:, :, 1] >= y_min) & (rays[:, :, 1] < y_max) & \
-        #                torch.isfinite(rays[:, :, 2])
-                
-        #         if mask.any():
-        #             height_map[i, j] = torch.max(rays[:, :, 2][mask])
-        
-        # # Replace -inf with 0 for empty cells
-        # height_map[height_map == float('-inf')] = 0.0
-        
-        # print(f"Height map shape: {height_map.shape}")
-        # print(f"Height map min: {height_map.min()}, max: {height_map.max()}")
-        # print(height_map)
-        
         # Create height map from raycaster data
         res = 6  # resolution (cells per meter)
         x_range = (-MAX_RAY_DIST, MAX_RAY_DIST)
-        y_range = (-MAX_RAY_DIST, MAX_RAY_DIST)
+        y_range = (-MAX_RAY_DIST/ 2.0, MAX_RAY_DIST / 2.0)
         
         # Create grid dimensions
         x_cells = int((x_range[1] - x_range[0]) * res)
@@ -284,12 +293,14 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
         
         # Get min z for each unique grid cell
         height_map_flat = height_map_flat.scatter_reduce(
-            0, flat_indices, z_vals, reduce='amin', include_self=True
+            0, flat_indices, z_vals, reduce='amax', include_self=False
         )
         height_map = height_map_flat.reshape(x_cells, y_cells)
         
         # Replace inf with 0 or any default value for empty cells
         height_map[height_map == float('inf')] = 0.0
+        height_map[height_map < 0.0] = 0.0
+        height_map[height_map.shape[0]//2-height_map.shape[0]//4:height_map.shape[0]//2+height_map.shape[0]//4, height_map.shape[1]//2-height_map.shape[1]//8:height_map.shape[1]//2+height_map.shape[1]//8] = 0.0
         
         print(f"Height map shape: {height_map.shape}")
         print(f"Height map min: {height_map.min()}, max: {height_map.max()}")

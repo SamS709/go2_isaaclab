@@ -14,7 +14,7 @@ from isaaclab.assets import Articulation
 from isaaclab.envs import DirectRLEnv
 from isaaclab.sensors import ContactSensor, RayCaster
 from isaaclab.managers import CommandManager, CurriculumManager
-from isaaclab.utils.math import quat_apply_inverse
+from isaaclab.utils.math import quat_apply_inverse,  quat_apply, quat_conjugate
 
 from .go2_env_cfg import Go2FlatEnvCfg, Go2LidarEnvCfg
 
@@ -104,7 +104,7 @@ class Go2Env(DirectRLEnv):
             torch.Tensor: Heightmaps with shape [num_envs, x_cells, y_cells]
         """
         x_range = (-self.cfg.height_map_dist, self.cfg.height_map_dist)
-        y_range = (-self.cfg.height_map_dist, self.cfg.height_map_dist)
+        y_range = (-self.cfg.height_map_dist / 2.0, self.cfg.height_map_dist / 2.0)
         
         # Grid dimensions
         x_cells = int((x_range[1] - x_range[0]) * self.cfg.res)
@@ -116,12 +116,13 @@ class Go2Env(DirectRLEnv):
         
         # Mark valid rays before replacing inf
         ray_hit = torch.isfinite(rays).all(dim=-1)
-        # rays[torch.isinf(rays)] = 0
-        
-        # Apply sensor offsets
-        rays[:, :, 0] += self.cfg.lidar_offset[0]
-        rays[:, :, 1] += self.cfg.lidar_offset[1]
-        rays[:, :, 2] += self.cfg.lidar_offset[2]
+       
+       
+        offset_robot_frame = torch.tensor(self.cfg.lidar_offset, device=rays.device).unsqueeze(0).repeat(rays.shape[0], 1)  # [num_envs, 3]
+        offset_world_frame = quat_apply(self._robot.data.root_quat_w, offset_robot_frame)  # [num_envs, 3]
+        rays += offset_world_frame.unsqueeze(1)
+        # Rotate from world to robot frame
+        rays = quat_apply(quat_conjugate(self._robot.data.root_quat_w), rays)
         
         # Convert to grid indices: [num_envs, num_rays]
         x_idx = ((rays[:, :, 0] - x_range[0]) * self.cfg.res).long()
@@ -142,9 +143,12 @@ class Go2Env(DirectRLEnv):
         # Single scatter operation for all environments
         height_map = torch.zeros(self.num_envs * cells_per_env, device=rays.device)
         if len(global_idx) > 0:
-            height_map.scatter_reduce_(0, global_idx, z_vals, reduce='amin', include_self=False)
+            height_map.scatter_reduce_(0, global_idx, z_vals, reduce='amax', include_self=False)
         
-        return height_map.view(self.num_envs, x_cells, y_cells)
+        # Reshape and set center region to 0 for each environment
+        height_map = height_map.view(self.num_envs, x_cells, y_cells)
+        height_map[height_map<0.0] = 0.0
+        return height_map
     
     def _get_observations(self) -> dict:
         self._previous_actions = self._actions.clone()
@@ -375,6 +379,7 @@ class Go2LidarEnv(Go2Env):
         
         # Get per-environment heightmaps: [num_envs, x_cells, y_cells]
         height_map = self._get_lidar_obs()
+        
         
         # Flatten heightmap for each environment: [num_envs, x_cells * y_cells]
         height_map_flat = height_map.reshape(self.num_envs, -1)
