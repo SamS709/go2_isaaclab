@@ -37,7 +37,7 @@ from .commands.z_axis_command_cfg import ZAxisCommandCfg
 ##
 from isaaclab_assets.robots.unitree import UNITREE_GO2_CFG  # isort: skip
 
-DEBUG_VIS = True
+DEBUG_VIS = False
 
 def terrain_levels_vel(
     env: ManagerBasedRLEnv, env_ids: Sequence[int], asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
@@ -139,7 +139,7 @@ class EventCfg:
     
     robot_joint_stiffness_and_damping = EventTerm(
       func=mdp.randomize_actuator_gains,
-      mode="reset",
+      mode="startup",
       params={
           "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
           "stiffness_distribution_params": (0.9, 1.1),
@@ -152,7 +152,7 @@ class EventCfg:
     
     physics_material = EventTerm(
         func=mdp.randomize_rigid_body_material,
-        mode="reset",
+        mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
             "static_friction_range": (0.3, 1.2),
@@ -164,9 +164,9 @@ class EventCfg:
     
     reset_robot_joints = EventTerm(
         func=mdp.reset_joints_by_scale,
-        mode="startup",
+        mode="reset",
         params={
-            "position_range": (0.8, 1.2),
+            "position_range": (0.9, 1.1),
             "velocity_range": (-1.0, 1.0),
         },
     )
@@ -276,8 +276,8 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
    
 
     # reward scales
-    lin_vel_reward_scale = 1.0 # replace by 1.5 for env without damping and switfness randomization
-    lin_vel_dir_scale = 0.5  # Reward for matching velocity direction
+    lin_vel_reward_scale = 1.5 # replace by 1.5 for env without damping and switfness randomization
+    # lin_vel_dir_scale = 0.5  # Reward for matching velocity direction
     yaw_rate_reward_scale = 0.75
     base_z_reward_scale = 0.5
     z_vel_reward_scale = -2.0
@@ -304,7 +304,8 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
         """Post initialization to set debug_vis based on visualize flag."""
         # Update debug_vis for commands based on visualize attribute
         self.commands.base_velocity.debug_vis = self.visualize
-        self.commands.base_pos.debug_vis = self.visualize
+        # self.commands.base_pos.debug_vis = self.visualize
+
 
 
 @configclass
@@ -316,7 +317,6 @@ class CurriculumCfg:
 
 @configclass
 class Go2LidarEnvCfg(Go2FlatEnvCfg):
-    
     
     ROUGH_TERRAINS_CFG.num_cols = 1
     ROUGH_TERRAINS_CFG.num_rows = 1

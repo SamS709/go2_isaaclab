@@ -45,4 +45,4 @@ class Go2AsymmetricLidarEnvCfg(Go2LidarEnvCfg):
         # Calculate heightmap size as integer: (2 * height_map_dist * res)^2
         height_map_cells = int(2 * self.height_map_dist * self.res) ** 2
         self.observation_space = 50 + height_map_cells
-        self.critic_observation_space = 50 + height_map_cells
+        self.critic_observation_space = 53 + height_map_cells

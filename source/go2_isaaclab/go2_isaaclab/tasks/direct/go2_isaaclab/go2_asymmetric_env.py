@@ -119,28 +119,27 @@ class Go2AsymmetricLidarEnv(Go2LidarEnv):
         joint_pos_noisy = (self._robot.data.joint_pos - self._robot.data.default_joint_pos) + (2.0 * torch.rand_like(self._robot.data.default_joint_pos) - 1.0) * float(0.01) * randomize
         joint_vel_noisy = self._robot.data.joint_vel + (2.0 * torch.rand_like(self._robot.data.default_joint_pos) - 1.0) * float(0.05) * randomize
         velocity_commands = self._commands.get_command("base_velocity")
-        position_commands = self._commands.get_command("base_pos")
         
         # Get foot contact states (binary: 1 if in contact, 0 otherwise)
         foot_contacts = (torch.norm(self._contact_sensor.data.net_forces_w[:, self._feet_ids], dim=-1) > 1.0).float()
         # print("Feet names:", [self._robot.body_names[i] for i in self._feet_ids])        
         
         height_map = self._get_lidar_obs()
-        height_map_noisy = height_map + (2.0 * torch.rand_like(height_map) - 1.0) * float(0.1)
+        print(height_map)
+        # height_map_noisy = height_map + (2.0 * torch.rand_like(height_map) - 1.0) * float(0.02)
         # print(height_map_noisy)
         height_map_flat = height_map.reshape(self.num_envs, -1)
-        height_map_flat_noisy = height_map_flat + (2.0 * torch.rand_like(height_map_flat) - 1.0) * float(0.1)
+        height_map_flat_noisy = height_map_flat + (2.0 * torch.rand_like(height_map_flat) - 1.0) * float(0.02)
         # print(height_map_flat_noisy)
         actor_obs = torch.cat(
             [
                 base_ang_vel_noisy,                # 3
                 projected_gravity_noisy,           # 3
                 velocity_commands,                 # 3
-                position_commands,                 # 1
                 joint_pos_noisy,                   # 12
                 joint_vel_noisy,                   # 12
                 self._actions,                     # 12
-                foot_contacts,                     # 4
+                foot_contacts,                     # 2
                 height_map_flat_noisy,
             ],
             dim=-1,
@@ -151,11 +150,10 @@ class Go2AsymmetricLidarEnv(Go2LidarEnv):
                 base_ang_vel_noisy,                # 3
                 projected_gravity_noisy,           # 3
                 velocity_commands,                 # 3
-                position_commands,                 # 1
                 joint_pos_noisy,                   # 12
                 joint_vel_noisy,                   # 12
                 self._actions,                     # 12
-                foot_contacts,                     # 4
+                foot_contacts,                     # 2
                 height_map_flat_noisy,
             ],
             dim=-1,

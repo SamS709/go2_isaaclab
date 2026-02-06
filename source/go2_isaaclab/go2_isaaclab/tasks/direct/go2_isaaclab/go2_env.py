@@ -35,7 +35,7 @@ class Go2Env(DirectRLEnv):
             key: torch.zeros(self.num_envs, dtype=torch.float, device=self.device)
             for key in [
                 "track_lin_vel_xy_exp",
-                "lin_vel_dir",
+                # "lin_vel_dir",
                 "track_ang_vel_z_exp",
                 "track_base_z_exp",
                 "lin_vel_z_l2",
@@ -58,6 +58,8 @@ class Go2Env(DirectRLEnv):
         self._base_id, _ = self._contact_sensor.find_bodies("base")
         self._feet_ids, _ = self._contact_sensor.find_bodies(".*foot")
         self._thigh_ids, _ = self._contact_sensor.find_bodies(".*thigh")
+        self._hip_ids, _ = self._contact_sensor.find_bodies(".*hip")
+        self._calf_ids, _ = self._contact_sensor.find_bodies(".*calf")
                 
     def _setup_scene(self):
         self._robot = Articulation(self.cfg.robot)
@@ -122,7 +124,13 @@ class Go2Env(DirectRLEnv):
         offset_world_frame = quat_apply(self._robot.data.root_quat_w, offset_robot_frame)  # [num_envs, 3]
         rays += offset_world_frame.unsqueeze(1)
         # Rotate from world to robot frame
-        rays = quat_apply(quat_conjugate(self._robot.data.root_quat_w), rays)
+        # Reshape rays to [num_envs * num_rays, 3] for quat_apply
+        num_envs, num_rays, _ = rays.shape
+        rays_flat = rays.reshape(num_envs * num_rays, 3)
+        # Expand quaternions to match: [num_envs, 4] -> [num_envs * num_rays, 4]
+        quat_expanded = quat_conjugate(self._robot.data.root_quat_w).unsqueeze(1).expand(num_envs, num_rays, 4).reshape(num_envs * num_rays, 4)
+        rays_flat = quat_apply(quat_expanded, rays_flat)
+        rays = rays_flat.reshape(num_envs, num_rays, 3)
         
         # Convert to grid indices: [num_envs, num_rays]
         x_idx = ((rays[:, :, 0] - x_range[0]) * self.cfg.res).long()
@@ -148,6 +156,8 @@ class Go2Env(DirectRLEnv):
         # Reshape and set center region to 0 for each environment
         height_map = height_map.view(self.num_envs, x_cells, y_cells)
         height_map[height_map<0.0] = 0.0
+        height_map[:, -1, :] = 0.0
+        
         return height_map
     
     def _get_observations(self) -> dict:
@@ -185,17 +195,17 @@ class Go2Env(DirectRLEnv):
 
     def _get_rewards(self) -> torch.Tensor:
         # linear velocity tracking
-        roughness_scale = 1.0
-        if self._lidar is not None:
-            height_map = self._get_lidar_obs()
-            # Use standard deviation (more interpretable than variance)
-            terrain_roughness = torch.std(height_map, dim=(1, 2))
-            # Exponential decay: smooth transition, never reaches 0
-            # When std=0.1m, scale=0.9; std=0.3m, scale=0.5; std=0.5m, scale=0.25
-            roughness_scale = torch.exp(-7.0 * terrain_roughness)
+        # roughness_scale = 1.0
+        # if self._lidar is not None:
+        #     height_map = self._get_lidar_obs()
+        #     # Use standard deviation (more interpretable than variance)
+        #     terrain_roughness = torch.std(height_map, dim=(1, 2))
+        #     # Exponential decay: smooth transition, never reaches 0
+        #     # When std=0.1m, scale=0.9; std=0.3m, scale=0.5; std=0.5m, scale=0.25
+        #     roughness_scale = torch.exp(-7.0 * terrain_roughness)
 
         lin_vel_error = torch.sum(torch.square(self._commands.get_command("base_velocity")[:, :2] - self._robot.data.root_lin_vel_b[:, :2]),dim=1)
-        lin_vel_error_mapped = torch.exp(-lin_vel_error / 0.25) * roughness_scale
+        lin_vel_error_mapped = torch.exp(-lin_vel_error / 0.25) #* roughness_scale
         
         # velocity direction matching using cosine similarity (dot product of normalized vectors)
         cmd_vel_xy = self._commands.get_command("base_velocity")[:, :2]
@@ -207,17 +217,20 @@ class Go2Env(DirectRLEnv):
         actual_vel_dir = actual_vel_xy / (actual_vel_norm + 1e-6)
         cosine_sim = torch.sum(cmd_vel_dir * actual_vel_dir, dim=1)
         # Map to [0, 1]: reward only positive alignment, clip negative (opposite direction)
-        vel_threshold_mask = (cmd_vel_norm.squeeze() > 0.1).float()
-        lin_vel_dir = torch.square(cosine_sim.clip(min=0.0) * vel_threshold_mask)
+        # vel_threshold_mask = (cmd_vel_norm.squeeze() > 0.1).float()
+        # lin_vel_dir = torch.square(cosine_sim.clip(min=0.0) * vel_threshold_mask)
         
         # yaw rate tracking
         yaw_rate_error = torch.square(self._commands.get_command("base_velocity")[:, 2] - self._robot.data.root_ang_vel_b[:, 2])
-        yaw_rate_error_mapped = torch.exp(-yaw_rate_error / 0.25) * roughness_scale
+        yaw_rate_error_mapped = torch.exp(-yaw_rate_error / 0.25) #* roughness_scale
         # base_z_tracking
-        base_z_error = torch.exp(-torch.square((self._commands.get_command("base_pos")[:,0] - self._robot.data.root_pos_w[:,2]))/0.0025)
-        base_z_error *= roughness_scale
+        if self._lidar is not None:
+            base_z_error = torch.exp(-torch.square((self._commands.get_command("base_pos")[:,0] - self._robot.data.root_pos_w[:,2]))/0.0025)
+            #base_z_error *= roughness_scale
+        else:
+            base_z_error = 0.0
         # z velocity tracking
-        z_vel_error = torch.square(self._robot.data.root_lin_vel_b[:, 2]) * roughness_scale
+        z_vel_error = torch.square(self._robot.data.root_lin_vel_b[:, 2]) #* roughness_scale
         # angular velocity x/y
         ang_vel_error = torch.sum(torch.square(self._robot.data.root_ang_vel_b[:, :2]), dim=1)
         # joint vel
@@ -231,17 +244,17 @@ class Go2Env(DirectRLEnv):
         # feet air time
         first_contact = self._contact_sensor.compute_first_contact(self.step_dt)[:, self._feet_ids]
         last_air_time = self._contact_sensor.data.last_air_time[:, self._feet_ids]
-        air_time = torch.sum(torch.exp(-torch.square(0.4-last_air_time)/0.01) * first_contact, dim=1) * (
-            torch.norm(self._commands.get_command("base_pos")[:, :2], dim=1) > 0.1
+        air_time = torch.sum(torch.exp(-torch.square(0.5-last_air_time)/0.01) * first_contact, dim=1) * (
+            torch.norm(self._commands.get_command("base_velocity")[:, :2], dim=1) > 0.1
         ) 
         # flat orientation
-        flat_orientation = torch.sum(torch.square(self._robot.data.projected_gravity_b[:, :2]), dim=1) * roughness_scale
+        flat_orientation = torch.sum(torch.square(self._robot.data.projected_gravity_b[:, :2]), dim=1) #* roughness_scale
         
         # stay around default pos:        
         cmd = torch.linalg.norm(self._commands.get_command("base_velocity"), dim=1)
         body_vel = torch.linalg.norm(self._robot.data.root_lin_vel_b[:, :2], dim=1)
         rew = torch.linalg.norm((self._robot.data.joint_pos - self._robot.data.default_joint_pos), dim=1)
-        def_pos = torch.where(torch.logical_or(cmd > 0.0, body_vel > self.cfg.velocity_threshold), rew, self.cfg.stand_still_scale * rew) * roughness_scale
+        def_pos = torch.where(torch.logical_or(cmd > 0.0, body_vel > self.cfg.velocity_threshold), rew, self.cfg.stand_still_scale * rew) # * roughness_scale
         
         #Penalize variance in the amount of time each foot spends in the air/on the ground relative to each other
         last_air_time = self._contact_sensor.data.last_air_time[:, self._feet_ids]
@@ -255,8 +268,8 @@ class Go2Env(DirectRLEnv):
         net_contact_forces = self._contact_sensor.data.net_forces_w_history
         base_contact = torch.any(torch.max(torch.norm(net_contact_forces[:, :, self._base_id], dim=-1), dim=1)[0] > 1.0, dim=1).float()
         # undesired contacts (penalize thigh contacts)
-        thigh_contact = torch.max(torch.norm(net_contact_forces[:, :, self._thigh_ids], dim=-1), dim=1)[0] > 1.0
-        undesired_contacts = torch.sum(thigh_contact, dim=1)
+        u_contact = torch.max(torch.norm(net_contact_forces[:, :, self._thigh_ids + self._hip_ids + self._calf_ids], dim=-1), dim=1)[0] > 1.0
+        undesired_contacts = torch.sum(u_contact, dim=1)
         
         # joint position limits (penalize exceeding soft limits)
         out_of_limits = -(
@@ -269,7 +282,7 @@ class Go2Env(DirectRLEnv):
 
         rewards = {
             "track_lin_vel_xy_exp": lin_vel_error_mapped * self.cfg.lin_vel_reward_scale * self.step_dt,
-            "lin_vel_dir": lin_vel_dir * self.cfg.lin_vel_dir_scale * self.step_dt,
+            # "lin_vel_dir": lin_vel_dir * self.cfg.lin_vel_dir_scale * self.step_dt,
             "track_ang_vel_z_exp": yaw_rate_error_mapped * self.cfg.yaw_rate_reward_scale * self.step_dt,
             "track_base_z_exp": base_z_error * self.cfg.base_z_reward_scale * self.step_dt,
             "lin_vel_z_l2": z_vel_error * self.cfg.z_vel_reward_scale * self.step_dt,
@@ -394,7 +407,6 @@ class Go2LidarEnv(Go2Env):
                     self._robot.data.root_ang_vel_b + (2.0 * torch.rand_like(self._robot.data.root_ang_vel_b) - 1.0) * float(0.2),
                     self.projected_gravity + (2.0 * torch.rand_like(self.projected_gravity) - 1.0) * float(0.05),
                     self._commands.get_command("base_velocity"),
-                    self._commands.get_command("base_pos"),
                     self._robot.data.joint_pos - self._robot.data.default_joint_pos + (2.0 * torch.rand_like(self._robot.data.default_joint_pos) - 1.0) * float(0.01),
                     self._robot.data.joint_vel + (2.0 * torch.rand_like(self._robot.data.default_joint_pos) - 1.0) * float(0.5),
                     self._actions,
