@@ -125,7 +125,6 @@ class Go2AsymmetricLidarEnv(Go2LidarEnv):
         # print("Feet names:", [self._robot.body_names[i] for i in self._feet_ids])        
         
         height_map = self._get_lidar_obs()
-        print(height_map)
         # height_map_noisy = height_map + (2.0 * torch.rand_like(height_map) - 1.0) * float(0.02)
         # print(height_map_noisy)
         height_map_flat = height_map.reshape(self.num_envs, -1)
