@@ -9,10 +9,10 @@
 
 
 """python scripts/rsl_rl/train.py \
-  --task Isaac-Velocity-Go2-Direct-v0 \
-  --num_envs 8192 \
+  --task Isaac-Velocity-Go2-Asymmetric-Lidar-v0 \
+  --num_envs 2048 \
   --resume \
-  --load_run 2025-11-11_13-16-41 \
+  --load_run 2026-02-06_14-05-03 \
   --headless
 """
 import argparse

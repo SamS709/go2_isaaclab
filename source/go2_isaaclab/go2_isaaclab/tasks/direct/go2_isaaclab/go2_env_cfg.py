@@ -84,7 +84,7 @@ class CommandsCfg:
         heading_control_stiffness=0.5,
         debug_vis=DEBUG_VIS,
         ranges=mdp.UniformVelocityCommandCfg.Ranges(
-            lin_vel_x=(-1.0, 1.0), lin_vel_y=(-1.0, 1.0), ang_vel_z=(-1.0, 1.0), heading=None
+            lin_vel_x=(0.4, 1.0), lin_vel_y=(-0.3, 0.3), ang_vel_z=(-0.0, 0.0), heading=None
         ),
     )
     
@@ -276,16 +276,16 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
    
 
     # reward scales
-    lin_vel_reward_scale = 1.5 # replace by 1.5 for env without damping and switfness randomization
+    lin_vel_reward_scale = 2.0 # replace by 1.5 for env without damping and switfness randomization
     # lin_vel_dir_scale = 0.5  # Reward for matching velocity direction
-    yaw_rate_reward_scale = 0.75
-    base_z_reward_scale = 0.5
+    yaw_rate_reward_scale = 0.0 # was 0.75
+    base_z_reward_scale = 0.0
     z_vel_reward_scale = -2.0
-    ang_vel_reward_scale = -0.05
-    joint_vel_reward_scale = -0.001
-    joint_torque_reward_scale = -0.0002
+    ang_vel_reward_scale = 0.0 # was -0.05 then -0.01
+    joint_vel_reward_scale = -0.00001  # was 10 times this
+    joint_torque_reward_scale = -0.00002 
     joint_accel_reward_scale = -2.5e-7
-    action_rate_reward_scale = -0.1
+    action_rate_reward_scale = -0.01
     feet_air_time_reward_scale = 0.1
     flat_orientation_reward_scale = -2.5
     feet_distance_reward_scale = 0.0
@@ -293,7 +293,7 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
     stand_still_scale = 5.0
     feet_var_reward_scale = -1.0
     energy_reward_scale = -2e-5
-    termination_penalty_scale = -200.0  # Large penalty for falling/base contact
+    termination_penalty_scale = -0.0  # Large penalty for falling/base contact
     undesired_contacts_scale = -1.0  # Penalty for thigh contacts
     dof_pos_limits_scale = -10.0  # Penalty for joints exceeding soft limits
     
@@ -303,7 +303,7 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
     def __post_init__(self):
         """Post initialization to set debug_vis based on visualize flag."""
         # Update debug_vis for commands based on visualize attribute
-        self.commands.base_velocity.debug_vis = self.visualize
+        # self.commands.base_velocity.debug_vis = self.visualize
         # self.commands.base_pos.debug_vis = self.visualize
 
 
@@ -318,7 +318,7 @@ class CurriculumCfg:
 @configclass
 class Go2LidarEnvCfg(Go2FlatEnvCfg):
     
-    ROUGH_TERRAINS_CFG.num_cols = 1
+    ROUGH_TERRAINS_CFG.num_cols = 2
     ROUGH_TERRAINS_CFG.num_rows = 1
     curriculum: CurriculumCfg = CurriculumCfg()
     terrain = TerrainImporterCfg(
@@ -338,7 +338,7 @@ class Go2LidarEnvCfg(Go2FlatEnvCfg):
             project_uvw=True,
             texture_scale=(0.25, 0.25),
         ),
-        debug_vis=DEBUG_VIS,
+        debug_vis=False,
     )
     
     # Heightmap configuration
@@ -365,7 +365,7 @@ class Go2LidarEnvCfg(Go2FlatEnvCfg):
             channels=128, vertical_fov_range=[-90.0, 90.0], horizontal_fov_range=[-180, 180], horizontal_res=2.0
         ),
         max_distance=lidar_range,
-        debug_vis=DEBUG_VIS,
+        debug_vis=False,
     )
     
     

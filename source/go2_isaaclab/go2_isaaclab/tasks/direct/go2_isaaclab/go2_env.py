@@ -192,36 +192,55 @@ class Go2Env(DirectRLEnv):
             obs = self._buffer.compute(obs)
         observations = {"policy": obs}
         return observations
+    
+    def compute_tri(self, height_map):
+        """
+        Terrain Ruggedness Index: mean absolute height difference from neighbors
+        Args:
+            height_map: [num_envs, x_cells, y_cells]
+        Returns:
+            tri: [num_envs] - scalar roughness per environment
+        """
+        # Compute differences with all 8 neighbors using convolution
+        kernel = torch.tensor([
+            [1, 1, 1],
+            [1, 0, 1],
+            [1, 1, 1]
+        ], dtype=height_map.dtype, device=height_map.device) / 8.0
+        
+        # Add channel dimension for conv2d: [num_envs, 1, x, y]
+        height_map_4d = height_map[:,:-1,:].unsqueeze(1)  # Don't slice yet!
+        
+        # Compute local mean of neighbors
+        neighbor_mean = torch.nn.functional.conv2d(
+            height_map_4d, 
+            kernel.view(1, 1, 3, 3),
+            padding=0
+        ).squeeze(1)
+        # Now compute differences and slice both together
+        abs_diff = torch.abs(height_map[:,1:-2,1:-1] - neighbor_mean)  # Slice after subtraction
+        # Get top n differences per environment
+        n_sampled = 3
+        abs_flat = abs_diff.flatten(start_dim=1)
+        values, _ = torch.topk(abs_flat, n_sampled, dim=-1)
+        tri = torch.mean(values, dim=-1)
+        return tri
 
     def _get_rewards(self) -> torch.Tensor:
         # linear velocity tracking
-        # roughness_scale = 1.0
-        # if self._lidar is not None:
-        #     height_map = self._get_lidar_obs()
-        #     # Use standard deviation (more interpretable than variance)
-        #     terrain_roughness = torch.std(height_map, dim=(1, 2))
-        #     # Exponential decay: smooth transition, never reaches 0
-        #     # When std=0.1m, scale=0.9; std=0.3m, scale=0.5; std=0.5m, scale=0.25
-        #     roughness_scale = torch.exp(-7.0 * terrain_roughness)
+        
+        roughness_scale = 1.0
+        if self._lidar is not None:
+            height_map = self._get_lidar_obs()
+            terrain_roughness = self.compute_tri(height_map)
+            roughness_scale = torch.exp(-20.0 * terrain_roughness)
 
         lin_vel_error = torch.sum(torch.square(self._commands.get_command("base_velocity")[:, :2] - self._robot.data.root_lin_vel_b[:, :2]),dim=1)
-        lin_vel_error_mapped = torch.exp(-lin_vel_error / 0.25) #* roughness_scale
+        lin_vel_error_mapped = torch.exp(-lin_vel_error / 0.25) 
         
-        # velocity direction matching using cosine similarity (dot product of normalized vectors)
-        cmd_vel_xy = self._commands.get_command("base_velocity")[:, :2]
-        actual_vel_xy = self._robot.data.root_lin_vel_b[:, :2]
-        cmd_vel_norm = torch.norm(cmd_vel_xy, dim=1, keepdim=True)
-        actual_vel_norm = torch.norm(actual_vel_xy, dim=1, keepdim=True)
-        # Normalize and compute dot product: 1.0 = same direction, 0.0 = perpendicular, -1.0 = opposite
-        cmd_vel_dir = cmd_vel_xy / (cmd_vel_norm + 1e-6)
-        actual_vel_dir = actual_vel_xy / (actual_vel_norm + 1e-6)
-        cosine_sim = torch.sum(cmd_vel_dir * actual_vel_dir, dim=1)
-        # Map to [0, 1]: reward only positive alignment, clip negative (opposite direction)
-        # vel_threshold_mask = (cmd_vel_norm.squeeze() > 0.1).float()
-        # lin_vel_dir = torch.square(cosine_sim.clip(min=0.0) * vel_threshold_mask)
-        
+       
         # yaw rate tracking
-        yaw_rate_error = torch.square(self._commands.get_command("base_velocity")[:, 2] - self._robot.data.root_ang_vel_b[:, 2])
+        yaw_rate_error = torch.square(self._commands.get_command("base_velocity")[:, 2] - self._robot.data.root_ang_vel_b[:, 2]) * roughness_scale
         yaw_rate_error_mapped = torch.exp(-yaw_rate_error / 0.25) #* roughness_scale
         # base_z_tracking
         if self._lidar is not None:
@@ -230,17 +249,17 @@ class Go2Env(DirectRLEnv):
         else:
             base_z_error = 0.0
         # z velocity tracking
-        z_vel_error = torch.square(self._robot.data.root_lin_vel_b[:, 2]) #* roughness_scale
+        z_vel_error = torch.square(self._robot.data.root_lin_vel_b[:, 2]) * roughness_scale
         # angular velocity x/y
-        ang_vel_error = torch.sum(torch.square(self._robot.data.root_ang_vel_b[:, :2]), dim=1)
+        ang_vel_error = torch.sum(torch.square(self._robot.data.root_ang_vel_b[:, :2]), dim=1) * roughness_scale
         # joint vel
-        joint_vel = torch.sum(torch.square(torch.square(self._robot.data.joint_vel)), dim=1)
+        joint_vel = torch.sum(torch.square(torch.square(self._robot.data.joint_vel)), dim=1) * roughness_scale
         # joint torques
-        joint_torques = torch.sum(torch.square(self._robot.data.applied_torque), dim=1)
+        joint_torques = torch.sum(torch.square(self._robot.data.applied_torque), dim=1) * roughness_scale
         # joint acceleration
-        joint_accel = torch.sum(torch.square(self._robot.data.joint_acc), dim=1)
+        joint_accel = torch.sum(torch.square(self._robot.data.joint_acc), dim=1) * roughness_scale
         # action rate
-        action_rate = torch.sum(torch.square(self._actions - self._previous_actions), dim=1)
+        action_rate = torch.sum(torch.square(self._actions - self._previous_actions), dim=1) * roughness_scale
         # feet air time
         first_contact = self._contact_sensor.compute_first_contact(self.step_dt)[:, self._feet_ids]
         last_air_time = self._contact_sensor.data.last_air_time[:, self._feet_ids]
@@ -248,21 +267,21 @@ class Go2Env(DirectRLEnv):
             torch.norm(self._commands.get_command("base_velocity")[:, :2], dim=1) > 0.1
         ) 
         # flat orientation
-        flat_orientation = torch.sum(torch.square(self._robot.data.projected_gravity_b[:, :2]), dim=1) #* roughness_scale
+        flat_orientation = torch.sum(torch.square(self._robot.data.projected_gravity_b[:, :2]), dim=1) * roughness_scale
         
         # stay around default pos:        
         cmd = torch.linalg.norm(self._commands.get_command("base_velocity"), dim=1)
         body_vel = torch.linalg.norm(self._robot.data.root_lin_vel_b[:, :2], dim=1)
         rew = torch.linalg.norm((self._robot.data.joint_pos - self._robot.data.default_joint_pos), dim=1)
-        def_pos = torch.where(torch.logical_or(cmd > 0.0, body_vel > self.cfg.velocity_threshold), rew, self.cfg.stand_still_scale * rew) # * roughness_scale
+        def_pos = torch.where(torch.logical_or(cmd > 0.0, body_vel > self.cfg.velocity_threshold), rew, self.cfg.stand_still_scale * rew)  * roughness_scale
         
         #Penalize variance in the amount of time each foot spends in the air/on the ground relative to each other
         last_air_time = self._contact_sensor.data.last_air_time[:, self._feet_ids]
         last_contact_time = self._contact_sensor.data.last_contact_time[:, self._feet_ids]
-        feet_var =  torch.var(torch.clip(last_air_time, max=0.5), dim=1) + torch.var(torch.clip(last_contact_time, max=0.5), dim=1)
+        feet_var =  torch.var(torch.clip(last_air_time, max=0.5), dim=1) + torch.var(torch.clip(last_contact_time, max=0.5), dim=1) * roughness_scale
         
         # energy consumption (power = |torque| * |velocity|)
-        energy = torch.sum(torch.abs(self._robot.data.joint_vel) * torch.abs(self._robot.data.applied_torque), dim=-1)
+        energy = torch.sum(torch.abs(self._robot.data.joint_vel) * torch.abs(self._robot.data.applied_torque), dim=-1) * roughness_scale
         
         # termination penalty (applied when base contacts ground)
         net_contact_forces = self._contact_sensor.data.net_forces_w_history
