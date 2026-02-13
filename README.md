@@ -12,13 +12,16 @@ This project/repository trains a policy for go2 unitree robot and focuses on the
 
 **Key Features:**
 
-- `Train a policy` for go2 robot using direct based environnement. The policy follows the commands sent by the user: linear (x/y) velocitiezs // angular (z) velocity // base height.
-- `Test` it using keyboard in Isaacsim.
-- `Sim2Sim: Newton` from PhysX to Newton using Newton branch of Isaaclab repo.
-- `Sim2Sim: unitree_mujoco` from PhysX to Mujoco using the unitree_mujoco repo.
-- `Sim2Sim: huro` sim2sim in huro environment (github of a researcher at LORIA).
-- `Sim2Real: unitree_python_sdk2` sim2real in unitree_python_sdk2 using proprietary dds developed by unitree.
-- `Sim2Real: huro` sim2real in huro using ros2.
+1) [**Training**](#1-training)
+    - [`a) Train`](#a-train) a policy for go2 robot using direct based environnement. The policy follows the commands sent by the user: linear (x/y) velocitiezs // angular (z) velocity // base height.
+    - [`b) Test`](#b-test) it using keyboard in Isaacsim.
+2) [**Sim2Sim**](#2-sim2sim)
+    - [`a) Newton`](#a-newton) from PhysX to Newton using Newton branch of Isaaclab repo.
+    - [`b) Unitree_mujoco`](#b-unitree_mujoco) from PhysX to Mujoco using the unitree_mujoco repo.
+    - [`c) Huro`](#c-huro) sim2sim in huro environment (github of a researcher at LORIA).
+3) [**Sim2Real**](#3-sim2real)
+    - [`a) Unitree_python_sdk2`](#a-unitree_python_sdk2) sim2real in unitree_python_sdk2 using proprietary dds developed by unitree.
+    - [`b) Huro`](#b-huro) sim2real in huro using ros2.
 
 ## Installation
 
@@ -38,7 +41,9 @@ This project/repository trains a policy for go2 unitree robot and focuses on the
     python -m pip install -e source/go2_isaaclab
     ```
 
-## Training a policy for PhysX
+## 1) Training
+
+### a) Train
 
 Make sure you are in your the classic Isaac Lab Python environment (not the Newton branch). Go in the folder where you cloned the repo.
 
@@ -48,6 +53,8 @@ Make sure you are in your the classic Isaac Lab Python environment (not the Newt
     # use 'FULL_PATH_TO_isaaclab.sh|bat -p' instead of 'python' if Isaac Lab is not installed in Python venv or conda
     python scripts/rsl_rl/train.py --task Isaac-Velocity-Go2-Asymmetric-v0 --num_envs 4096 --headless
     ```
+
+### b) Test
 
 - Run the trained policy :
 
@@ -70,7 +77,9 @@ Make sure you are in your the classic Isaac Lab Python environment (not the Newt
   - **E/R keys**: Increase/decrease the robot's height (z-axis position)
   - **F/G keys**: Increase/decrease the robot's angular velocity (yaw rotation)
 
-## Making the Sim2Sim using Newton
+## 2) Sim2Sim
+
+### a) Newton
 
 Look at the instructions avaible [`here`](https://github.com/SamS709/go2_isaaclab_newton).
 
@@ -78,9 +87,9 @@ The result after Sim2sim.
 
 <img src="images/Newton_MuJoCo.png" width="400"/>
 
-## Making the Sim2Sim using unitree_mujoco
+### b) Unitree_mujoco
 
-### Dependancies
+#### Dependancies
 
 It is highly recommended to set up a **Conda environment** with `python=3.10` and install the following packages:
 
@@ -113,11 +122,11 @@ Finally, install the `PyYAML` package:
 pip install torch PyYAML
 ```
 
-### Installation
+#### Installation
 
 Copy and paste the `/go2_mujoco` directory, located inside the `/sim2sim` folder, into the `/unitree_mujoco` root directory.
 
-### Sim2sim
+#### Sim2sim
 
 In one terminal (launch the simulation):
 
@@ -134,9 +143,21 @@ python go2_publisher.py --vel-x=-0.5 --policy=policy_newton.pt --mapping=newton
 
 <img src="images/Unitree_MuJoCo.png" width="400"/>
 
-## Making the Sim2Real using huro
+### c) Huro
 
-[huro](https://github.com/hucebot/huro) is a costum ROS 2 interface for Unitree robots.
+<img src="images/huro.png" width="400"/>
+
+See the instruction at [`Sim2real with Huro`](#b-huro) (they are already provided here) 
+
+## 3) Sim2Real
+
+### a) Unitree_python_sdk2
+
+Follow the instructions provided <a href = "https://github.com/SamS709/go2_unitree.git">here</a>
+
+### b) Huro
+
+[Huro](https://github.com/hucebot/huro) is a costum ROS 2 interface for Unitree robots.
 
 Clone the [`sami`](https://github.com/hucebot/huro/tree/sami) branch:
 
@@ -146,6 +167,4 @@ git clone --single-branch --branch sami https://github.com/itsikelis/huro.git
 
 Follow the instructions provided in the [README](https://github.com/hucebot/huro/blob/sami/README.md) to see how to deploy a policy in simulation or in the real robot.
 
-## Making the Sim2Sim and Sim2Real using unitree_sdk2_python
 
-Follow the instructions provided <a href = "https://github.com/SamS709/go2_unitree.git">here</a>
