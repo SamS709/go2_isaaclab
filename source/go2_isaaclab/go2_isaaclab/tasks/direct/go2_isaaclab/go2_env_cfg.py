@@ -19,14 +19,11 @@ from isaaclab.envs import DirectRLEnvCfg
 from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.scene import InteractiveSceneCfg
-from isaaclab.sensors import ContactSensorCfg, RayCasterCfg, patterns
-from isaaclab.managers import CurriculumTermCfg as CurrTerm
+from isaaclab.sensors import ContactSensorCfg
 
 from isaaclab.sim import SimulationCfg
 from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
-from isaaclab.terrains.config.rough import ROUGH_TERRAINS_CFG  # isort: skip
-from isaaclab.utils.assets import ISAACLAB_NUCLEUS_DIR
 
 
 # Import custom commands
@@ -303,69 +300,3 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
         # Update debug_vis for commands based on visualize attribute
         self.commands.base_velocity.debug_vis = self.visualize
         self.commands.base_pos.debug_vis = self.visualize
-
-
-@configclass
-class CurriculumCfg:
-    """Curriculum terms for the MDP."""
-
-    terrain_levels = CurrTerm(func=terrain_levels_vel)
-
-
-@configclass
-class Go2LidarEnvCfg(Go2FlatEnvCfg):
-    
-    
-    ROUGH_TERRAINS_CFG.num_cols = 3
-    ROUGH_TERRAINS_CFG.num_rows = 3
-    curriculum: CurriculumCfg = CurriculumCfg()
-    terrain = TerrainImporterCfg(
-        prim_path="/World/ground",
-        terrain_type="generator",
-        terrain_generator=ROUGH_TERRAINS_CFG,
-        max_init_terrain_level=5,
-        collision_group=-1,
-        physics_material=sim_utils.RigidBodyMaterialCfg(
-            friction_combine_mode="multiply",
-            restitution_combine_mode="multiply",
-            static_friction=1.0,
-            dynamic_friction=1.0,
-        ),
-        visual_material=sim_utils.MdlFileCfg(
-            mdl_path=f"{ISAACLAB_NUCLEUS_DIR}/Materials/TilesMarbleSpiderWhiteBrickBondHoned/TilesMarbleSpiderWhiteBrickBondHoned.mdl",
-            project_uvw=True,
-            texture_scale=(0.25, 0.25),
-        ),
-        debug_vis=False,
-    )
-    
-    # Heightmap configuration
-    height_map_dist = 1
-    res = 6  # resolution of the heightmap (cells per meter)
-    height_map_cells = int(2 * height_map_dist * res) ** 2  
-    observation_space = 53 + height_map_cells  
-    
-    lidar_range = height_map_dist * 3.0 # * 1.4142135623730951  # sqrt(2)
-    lidar_offset = (0.28945, 0.0, -0.04682)
-    # Pre-computed quaternion (w, x, y, z) from euler angles (-pi, pi - 2.8782, -pi)
-    lidar_rotation = (1.3132e-01, 3.7593e-08, 9.9134e-01, 3.7593e-08)
-    
-    lidar_cfg = RayCasterCfg(
-        prim_path="/World/envs/env_.*/Robot/base",
-        update_period=1 / 60,
-        offset=RayCasterCfg.OffsetCfg(
-            pos=lidar_offset,
-            rot=lidar_rotation,
-        ),
-        mesh_prim_paths=["/World/ground"],
-        ray_alignment="base",
-        pattern_cfg=patterns.LidarPatternCfg(
-            channels=32, vertical_fov_range=[-90.0, 90.0], horizontal_fov_range=[-180, 180], horizontal_res=2.0
-        ),
-        max_distance=lidar_range,
-        debug_vis=False,
-    )
-    
-    
-
-
