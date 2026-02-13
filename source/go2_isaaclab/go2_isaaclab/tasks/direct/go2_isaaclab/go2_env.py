@@ -12,11 +12,10 @@ from isaaclab.utils.buffers import DelayBuffer
 import isaaclab.sim as sim_utils
 from isaaclab.assets import Articulation
 from isaaclab.envs import DirectRLEnv
-from isaaclab.sensors import ContactSensor, RayCaster
-from isaaclab.managers import CommandManager, CurriculumManager
-from isaaclab.utils.math import quat_apply_inverse
+from isaaclab.sensors import ContactSensor
+from isaaclab.managers import CommandManager
 
-from .go2_env_cfg import Go2FlatEnvCfg, Go2LidarEnvCfg
+from .go2_env_cfg import Go2FlatEnvCfg
 
 
 class Go2Env(DirectRLEnv):
@@ -64,7 +63,6 @@ class Go2Env(DirectRLEnv):
         self.scene.articulations["robot"] = self._robot
         self._commands = CommandManager(self.cfg.commands, self)
         
-        self._lidar = None
         self.history_length = 2
         self.delay = True
         if self.delay == True:
@@ -97,101 +95,11 @@ class Go2Env(DirectRLEnv):
     def _apply_action(self):
         self._robot.set_joint_position_target(self._processed_actions)
 
-    def _get_lidar_obs(self):
-        """Generate per-environment heightmaps from lidar data (fully vectorized).
-        
-        Returns:
-            torch.Tensor: Heightmaps with shape [num_envs, x_cells, y_cells]
-        """
-        x_range = (-self.cfg.height_map_dist, self.cfg.height_map_dist)
-        y_range = (-self.cfg.height_map_dist, self.cfg.height_map_dist)
-        
-        # Grid dimensions
-        x_cells = int((x_range[1] - x_range[0]) * self.cfg.res)
-        y_cells = int((y_range[1] - y_range[0]) * self.cfg.res)
-        cells_per_env = x_cells * y_cells
-        
-        # Calculate rays: [num_envs, num_rays, 3]
-        rays = self._lidar.data.pos_w.unsqueeze(1) - self._lidar.data.ray_hits_w
-        
-        # Mark valid rays before replacing inf
-        ray_hit = torch.isfinite(rays).all(dim=-1)
-        # rays[torch.isinf(rays)] = 0
-        
-        # Apply sensor offsets
-        rays[:, :, 0] += self.cfg.lidar_offset[0]
-        rays[:, :, 1] += self.cfg.lidar_offset[1]
-        rays[:, :, 2] += self.cfg.lidar_offset[2]
-        
-        # Convert to grid indices: [num_envs, num_rays]
-        x_idx = ((rays[:, :, 0] - x_range[0]) * self.cfg.res).long()
-        y_idx = ((rays[:, :, 1] - y_range[0]) * self.cfg.res).long()
-        
-        # Validate and flatten
-        valid = (
-            ray_hit &
-            (x_idx >= 0) & (x_idx < x_cells) &
-            (y_idx >= 0) & (y_idx < y_cells)
-        )
-        
-        # Create global indices: env_id * cells_per_env + x_idx * y_cells + y_idx
-        env_ids = torch.arange(self.num_envs, device=rays.device).view(-1, 1).expand_as(x_idx)
-        global_idx = (env_ids * cells_per_env + x_idx * y_cells + y_idx)[valid]
-        z_vals = rays[:, :, 2][valid]
-        
-        # Single scatter operation for all environments
-        height_map = torch.zeros(self.num_envs * cells_per_env, device=rays.device)
-        if len(global_idx) > 0:
-            height_map.scatter_reduce_(0, global_idx, z_vals, reduce='amin', include_self=False)
-        
-        return height_map.view(self.num_envs, x_cells, y_cells)
-    
-    def _get_observations(self) -> dict:
-        self._previous_actions = self._actions.clone()
-
-        self.projected_gravity = quat_apply_inverse(
-            self._robot.data.root_quat_w, torch.tensor([0.0, 0.0, -1.0], device=self.device).repeat(self.num_envs, 1)
-        )
-
-        foot_contacts = (torch.norm(self._contact_sensor.data.net_forces_w[:, self._feet_ids], dim=-1) > 1.0).float()
-        
-        # observations with noise added
-        obs = torch.cat(
-            [
-                tensor
-                for tensor in (
-                    self._robot.data.root_lin_vel_b + (2.0 * torch.rand_like(self._robot.data.root_lin_vel_b) - 1.0) * float(0.1),
-                    self._robot.data.root_ang_vel_b + (2.0 * torch.rand_like(self._robot.data.root_ang_vel_b) - 1.0) * float(0.2),
-                    self.projected_gravity + (2.0 * torch.rand_like(self.projected_gravity) - 1.0) * float(0.05),
-                    self._commands.get_command("base_velocity"),
-                    self._commands.get_command("base_pos"),
-                    self._robot.data.joint_pos - self._robot.data.default_joint_pos + (2.0 * torch.rand_like(self._robot.data.default_joint_pos) - 1.0) * float(0.01),
-                    self._robot.data.joint_vel + (2.0 * torch.rand_like(self._robot.data.default_joint_pos) - 1.0) * float(0.5),
-                    self._actions,
-                    foot_contacts,
-                )
-                if tensor is not None
-            ],
-            dim=-1,
-        )
-        if self.delay == True:
-            obs = self._buffer.compute(obs)
-        observations = {"policy": obs}
-        return observations
-
     def _get_rewards(self) -> torch.Tensor:
-        # linear velocity tracking
-        roughness_scale = 1.0
-        if self._lidar is not None:
-            height_map = self._get_lidar_obs()
-            # Use standard deviation (more interpretable than variance)
-            terrain_roughness = torch.std(height_map, dim=(1, 2))
-            # Exponential decay: smooth transition, never reaches 0
-            # When std=0.1m, scale=0.9; std=0.3m, scale=0.5; std=0.5m, scale=0.25
-            roughness_scale = torch.exp(-7.0 * terrain_roughness)
+
 
         lin_vel_error = torch.sum(torch.square(self._commands.get_command("base_velocity")[:, :2] - self._robot.data.root_lin_vel_b[:, :2]),dim=1)
-        lin_vel_error_mapped = torch.exp(-lin_vel_error / 0.25) * roughness_scale
+        lin_vel_error_mapped = torch.exp(-lin_vel_error / 0.25) 
         
         # velocity direction matching using cosine similarity (dot product of normalized vectors)
         cmd_vel_xy = self._commands.get_command("base_velocity")[:, :2]
@@ -208,12 +116,11 @@ class Go2Env(DirectRLEnv):
         
         # yaw rate tracking
         yaw_rate_error = torch.square(self._commands.get_command("base_velocity")[:, 2] - self._robot.data.root_ang_vel_b[:, 2])
-        yaw_rate_error_mapped = torch.exp(-yaw_rate_error / 0.25) * roughness_scale
+        yaw_rate_error_mapped = torch.exp(-yaw_rate_error / 0.25) 
         # base_z_tracking
         base_z_error = torch.exp(-torch.square((self._commands.get_command("base_pos")[:,0] - self._robot.data.root_pos_w[:,2]))/0.0025)
-        base_z_error *= roughness_scale
         # z velocity tracking
-        z_vel_error = torch.square(self._robot.data.root_lin_vel_b[:, 2]) * roughness_scale
+        z_vel_error = torch.square(self._robot.data.root_lin_vel_b[:, 2]) 
         # angular velocity x/y
         ang_vel_error = torch.sum(torch.square(self._robot.data.root_ang_vel_b[:, :2]), dim=1)
         # joint vel
@@ -231,13 +138,13 @@ class Go2Env(DirectRLEnv):
             torch.norm(self._commands.get_command("base_pos")[:, :2], dim=1) > 0.1
         ) 
         # flat orientation
-        flat_orientation = torch.sum(torch.square(self._robot.data.projected_gravity_b[:, :2]), dim=1) * roughness_scale
+        flat_orientation = torch.sum(torch.square(self._robot.data.projected_gravity_b[:, :2]), dim=1) 
         
         # stay around default pos:        
         cmd = torch.linalg.norm(self._commands.get_command("base_velocity"), dim=1)
         body_vel = torch.linalg.norm(self._robot.data.root_lin_vel_b[:, :2], dim=1)
         rew = torch.linalg.norm((self._robot.data.joint_pos - self._robot.data.default_joint_pos), dim=1)
-        def_pos = torch.where(torch.logical_or(cmd > 0.0, body_vel > self.cfg.velocity_threshold), rew, self.cfg.stand_still_scale * rew) * roughness_scale
+        def_pos = torch.where(torch.logical_or(cmd > 0.0, body_vel > self.cfg.velocity_threshold), rew, self.cfg.stand_still_scale * rew) 
         
         #Penalize variance in the amount of time each foot spends in the air/on the ground relative to each other
         last_air_time = self._contact_sensor.data.last_air_time[:, self._feet_ids]
@@ -336,73 +243,3 @@ class Go2Env(DirectRLEnv):
         extras["Episode_Termination/time_out"] = torch.count_nonzero(self.reset_time_outs[env_ids]).item()
         self.extras["log"].update(extras)
 
-
-
-class Go2LidarEnv(Go2Env):
-    cfg: Go2LidarEnvCfg
-
-    def __init__(self, cfg: Go2LidarEnvCfg, render_mode: str | None = None, **kwargs):
-        super().__init__(cfg, render_mode, **kwargs)
-
-        
-        
-    def _setup_scene(self):
-        super()._setup_scene()
-        self._lidar = RayCaster(self.cfg.lidar_cfg)
-        self.scene.sensors["lidar"] = self._lidar
-        
-        # Initialize curriculum manager for terrain difficulty progression
-        self._curriculum = CurriculumManager(self.cfg.curriculum, self)
-    
-    def _reset_idx(self, env_ids: torch.Tensor | None):
-        # Call parent reset
-        super()._reset_idx(env_ids)
-        
-        # Update curriculum (adjusts terrain difficulty based on performance)
-        self._curriculum.compute(env_ids)
-   
-    
-        
-    
-    def _get_observations(self) -> dict:
-        self._previous_actions = self._actions.clone()
-
-        self.projected_gravity = quat_apply_inverse(
-            self._robot.data.root_quat_w, torch.tensor([0.0, 0.0, -1.0], device=self.device).repeat(self.num_envs, 1)
-        )
-
-        foot_contacts = (torch.norm(self._contact_sensor.data.net_forces_w[:, self._feet_ids], dim=-1) > 1.0).float()
-        
-        # Get per-environment heightmaps: [num_envs, x_cells, y_cells]
-        height_map = self._get_lidar_obs()
-        
-        # Flatten heightmap for each environment: [num_envs, x_cells * y_cells]
-        height_map_flat = height_map.reshape(self.num_envs, -1)
-        
-        
-        # observations with noise added
-        obs = torch.cat(
-            [
-                tensor
-                for tensor in (
-                    self._robot.data.root_lin_vel_b + (2.0 * torch.rand_like(self._robot.data.root_lin_vel_b) - 1.0) * float(0.1),
-                    self._robot.data.root_ang_vel_b + (2.0 * torch.rand_like(self._robot.data.root_ang_vel_b) - 1.0) * float(0.2),
-                    self.projected_gravity + (2.0 * torch.rand_like(self.projected_gravity) - 1.0) * float(0.05),
-                    self._commands.get_command("base_velocity"),
-                    self._commands.get_command("base_pos"),
-                    self._robot.data.joint_pos - self._robot.data.default_joint_pos + (2.0 * torch.rand_like(self._robot.data.default_joint_pos) - 1.0) * float(0.01),
-                    self._robot.data.joint_vel + (2.0 * torch.rand_like(self._robot.data.default_joint_pos) - 1.0) * float(0.5),
-                    self._actions,
-                    foot_contacts,
-                    height_map_flat + (2.0 * torch.rand_like(height_map_flat) - 1.0) * float(0.01),
-                )
-                if tensor is not None
-            ],
-            dim=-1,
-        )
-        if self.delay == True:
-            obs = self._buffer.compute(obs)
-        observations = {"policy": obs}
-        return observations
-
-    
