@@ -46,12 +46,12 @@ This project/repository trains a policy for go2 unitree robot and focuses on the
 
 ### a) Train
 
-Make sure you are in your the classic Isaac Lab Python environment (not the Newton branch). Go in the folder where you cloned the repo.
+Make sure you are in your the classic Isaac Lab Python environment (not the Newton branch).
 
 - Train the Go2 locomotion environment:
 
     ```bash
-    # use 'FULL_PATH_TO_isaaclab.sh|bat -p' instead of 'python' if Isaac Lab is not installed in Python venv or conda
+    cd go2_isaaclab
     python scripts/rsl_rl/train.py --task Isaac-Velocity-Go2-Asymmetric-v0 --num_envs 4096 --headless
     ```
 
