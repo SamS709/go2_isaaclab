@@ -13,7 +13,8 @@ but adapted for Direct RL environments instead of manager-based.
 from __future__ import annotations
 
 import torch
-from .go2_env import Go2Env, quat_apply_inverse
+from .go2_env import Go2Env
+from isaaclab.utils.math import quat_apply_inverse
 from .go2_asymmetric_env_cfg import Go2AsymmetricEnvCfg
 
 torch.set_printoptions(precision=2, linewidth=200, sci_mode=False)
