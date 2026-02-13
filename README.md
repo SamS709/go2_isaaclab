@@ -22,6 +22,7 @@ This project/repository trains a policy for go2 unitree robot and focuses on the
 3) [**Sim2Real**](#3-sim2real)
     - [`a) Unitree_python_sdk2`](#a-unitree_python_sdk2) sim2real in unitree_python_sdk2 using proprietary dds developed by unitree.
     - [`b) Huro`](#b-huro) sim2real in huro using ros2.
+4) [**BONUS**](#4-bonus)
 
 ## Installation
 
@@ -166,5 +167,9 @@ git clone --single-branch --branch sami https://github.com/itsikelis/huro.git
 ```
 
 Follow the instructions provided in the [README](https://github.com/hucebot/huro/blob/sami/README.md) to see how to deploy a policy in simulation or in the real robot.
+
+## 4) BONUS
+
+Beta: lidar integration avaible here: [go2_lidar](#https://github.com/SamS709/go2_lidar)
 
 
