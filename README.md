@@ -90,6 +90,8 @@ The result after Sim2sim.
 
 ### b) Unitree_mujoco
 
+(Tested on Linux and WSL)
+
 #### Dependancies
 
 It is highly recommended to set up a **Conda environment** with `python=3.10` and install the following packages:
