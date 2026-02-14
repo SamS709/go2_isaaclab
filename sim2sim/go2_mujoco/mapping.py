@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-
-import numpy as np
+import torch
 import yaml
 
 
@@ -15,7 +14,7 @@ class Mapper:
             mapping_yaml_path: Path to YAML file with source_joint_names and target_joint_names
             default_pos_sdk: Default joint positions in SDK/actuator order (12,)
         """
-        self.default_pos_sdk = np.array(default_pos_sdk)
+        self.default_pos_sdk = torch.tensor(default_pos_sdk)
         
         # Load joint mapping
         self.target_to_source, self.source_to_target, self.source_names, self.target_names = self._load_joint_mapping(mapping_yaml_path)
@@ -71,7 +70,7 @@ class Mapper:
         Returns:
             values_policy: Array of values in policy order (12,)
         """
-        values_policy = np.zeros(12)
+        values_policy = torch.zeros(12)
         for policy_idx, policy_joint_name in enumerate(source_names):
             sdk_idx = target_names.index(policy_joint_name)
             values_policy[policy_idx] = values_sdk[sdk_idx]
@@ -87,7 +86,7 @@ class Mapper:
         Returns:
             actions_sdk_order: Actions in SDK order (12,)
         """
-        actions_sdk = np.zeros(12)
+        actions_sdk = torch.zeros(12)
         for policy_idx, policy_joint_name in enumerate(self.source_names):
             sdk_idx = self.target_names.index(policy_joint_name)
             actions_sdk[sdk_idx] = actions_policy_order[policy_idx]

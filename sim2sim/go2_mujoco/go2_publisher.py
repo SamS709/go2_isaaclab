@@ -16,7 +16,6 @@ Or with all parameters:
 
 """
 import time
-import numpy as np
 import torch
 import os
 
@@ -28,7 +27,7 @@ from unitree_sdk2py.utils.crc import CRC
 from get_obs import get_obs
 from mapping import Mapper
 
-np.set_printoptions(precision=3)
+torch.set_printoptions(precision=3)
 
 
 class Go2PolicyController:
@@ -80,7 +79,7 @@ class Go2PolicyController:
             print("[ERROR] The specified mapping doesnt exist.")
             return
         
-        default_pos_sdk = np.array([
+        default_pos_sdk = torch.tensor([
             -0.1, 0.8, -1.5,  # FR: hip, thigh, calf (actuators 0-2)
             0.1, 0.8, -1.5,  # FL: hip, thigh, calf (actuators 3-5)
             -0.1, 1.0, -1.5,  # RR: hip, thigh, calf (actuators 6-8)
@@ -95,7 +94,7 @@ class Go2PolicyController:
         self.height = height
 
         # Store latest action (for use between policy updates)
-        self.current_action = np.zeros(12)
+        self.current_action = torch.zeros(12)
 
         # Store latest messages
         self.latest_low_state = None
@@ -215,8 +214,8 @@ class Go2PolicyController:
             ).unsqueeze(0)
             actions_tensor = self.policy(obs_tensor)
 
-        actions_policy_order = actions_tensor.squeeze(0).cpu().numpy()
-        self.current_action = actions_policy_order.copy()
+        actions_policy_order = actions_tensor.squeeze(0)
+        self.current_action = actions_policy_order.clone()
 
         # Send motor commands
         self.send_motor_commands()

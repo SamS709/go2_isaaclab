@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 
 from unitree_sdk2py.idl.unitree_go.msg.dds_ import LowState_, SportModeState_
-import numpy as np
-
+import torch
 
 def quat_rotate_inverse(q, v):
     """
@@ -12,9 +11,9 @@ def quat_rotate_inverse(q, v):
     Returns rotated vector
     """
     q_w, q_x, q_y, q_z = q[0], q[1], q[2], q[3]
-    q_conj = np.array([q_w, -q_x, -q_y, -q_z])
-    t = 2.0 * np.cross(q_conj[1:], v)
-    return v + q_conj[0] * t + np.cross(q_conj[1:], t)
+    q_conj = torch.tensor([q_w, -q_x, -q_y, -q_z])
+    t = 2.0 * torch.cross(q_conj[1:], v)
+    return v + q_conj[0] * t + torch.cross(q_conj[1:], t)
 
 
 def get_obs(
@@ -23,7 +22,7 @@ def get_obs(
     vel_y: float,
     vel_yaw: float,
     height: float,
-    prev_actions: np.ndarray,
+    prev_actions: torch.tensor,
     mapper,
 ):
     """
@@ -56,8 +55,8 @@ def get_obs(
     # MAPPING ROBOT -> POLICY
     motor_states = lowstate_msg.motor_state[:12]
     
-    current_joint_pos_sdk = np.array([motor_states[i].q for i in range(12)])
-    current_joint_vel_sdk = np.array([motor_states[i].dq for i in range(12)])
+    current_joint_pos_sdk = torch.tensor([motor_states[i].q for i in range(12)])
+    current_joint_vel_sdk = torch.tensor([motor_states[i].dq for i in range(12)])
     
     current_joint_pos_policy = mapper.remap_joints_by_name(
         current_joint_pos_sdk, mapper.target_names, mapper.source_names, mapper.target_to_source
@@ -68,29 +67,29 @@ def get_obs(
     default_pos_policy = mapper.default_pos_policy
 
     # FILLING OBS VECTOR
-    obs = np.zeros(50)
+    obs = torch.zeros(50)
     
     # Base angular velocity (gyroscope) (obs[0:3])
-    obs[0:3] = np.array([
+    obs[0:3] = torch.tensor([
         lowstate_msg.imu_state.gyroscope[0],
         lowstate_msg.imu_state.gyroscope[1],
         lowstate_msg.imu_state.gyroscope[2]
     ])
     
     # Computing projected gravity from IMU sensor
-    quat = np.array([
+    quat = torch.tensor([
         lowstate_msg.imu_state.quaternion[0],  # w
         lowstate_msg.imu_state.quaternion[1],  # x
         lowstate_msg.imu_state.quaternion[2],  # y
         lowstate_msg.imu_state.quaternion[3]   # z
     ])
     
-    gravity_world = np.array([0.0, 0.0, -1.0])
+    gravity_world = torch.tensor([0.0, 0.0, -1.0])
     gravity_b = quat_rotate_inverse(quat, gravity_world)
     obs[3:6] = gravity_b
     
     # Command velocity (obs[6:9])
-    obs[6:9] = [vel_x, vel_y, vel_yaw]
+    obs[6:9] = torch.tensor([vel_x, vel_y, vel_yaw])
     
     # Height command (obs[9])
     obs[9] = height
@@ -105,12 +104,12 @@ def get_obs(
     obs[34:46] = prev_actions
     
 
-    obs[46:50] = [
+    obs[46:50] = torch.tensor([
         float(lowstate_msg.foot_force[0]>30),
         float(lowstate_msg.foot_force[1]>30),
         float(lowstate_msg.foot_force[2]>30),
         float(lowstate_msg.foot_force[3]>30)
-    ]
-    print(obs[46:50])
+    ])
+    # print(obs[46:50])
     
     return obs
